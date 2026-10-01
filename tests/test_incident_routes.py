@@ -75,3 +75,32 @@ async def test_upload_rejects_html_disguised_as_jpeg(customer_app):
     response = await client.post(f"/customer/{case['id']}/photos", data=form, headers={"X-Incident-Token": case["token"]})
     assert response.status == 400
     assert not cases.get(case["id"])["photos"]
+
+
+def test_customer_agent_reports_once_with_photo_and_provenance(tmp_path):
+    from fleet.customer_agent import simulate_customer
+    from fleet.foundry import EvidenceResult
+    from fleet.insurance import IncidentError
+
+    cases = Incidents(StateStore(tmp_path / "state.sqlite3"))
+    vehicle = {"VehicleId": "CD-007", "Registration": "LO24 AGD", "Make": "Mercedes-Benz", "Model": "C-Class", "City": "London", "BranchId": "LON"}
+    case = cases.create({"EventId": str(uuid.uuid4()), "Timestamp": utc_text(datetime.now(UTC)), "PeakAccelerationG": 3.7, "DeltaVKmh": 6}, vehicle)
+    evidence = EvidenceService(cases)
+    evidence.config = {"customer_agent_name": "caldova-customer", "customer_agent_version": "1"}
+    seen = {}
+
+    class Agent:
+        def invoke(self, instructions, text, image=None):
+            seen.update(text=text, image=image)
+            return EvidenceResult({"description": "I reversed slowly into a bollard and dented the rear bumper."},
+                                  {"response_id": "resp_1", "agent_name": "caldova-customer", "agent_version": "1"})
+
+    result = simulate_customer(cases, evidence, case["id"], Agent())
+    assert result["status"] == "evidence_received"
+    record = cases.get(case["id"])
+    assert len(record["photos"]) == 1 and seen["image"]
+    assert "Mercedes-Benz C-Class" in seen["text"] and "LO24" not in seen["text"]
+    assert record["customer_report"]["consent_to_share_redacted"] is True
+    assert record["customer_agent"]["response_id"] == "resp_1"
+    with pytest.raises(IncidentError):
+        simulate_customer(cases, evidence, case["id"], Agent())

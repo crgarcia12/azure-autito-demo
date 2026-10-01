@@ -21,6 +21,18 @@ explicitly and require human review when evidence is inadequate or damage may ex
 cosmetic repair scope. Do not invent observations, infer hidden damage as fact or contact anyone.
 Do not browse, send email, make bookings or approve repairs. Those actions are outside this agent."""
 
+CUSTOMER_AGENT_NAME = "caldova-customer"
+CUSTOMER_AGENT_INSTRUCTIONS = """You are a Caldova Drive rental customer who has just had a minor, low-speed
+parking bump in your rental car. Caldova sent you a secure link and you are now filling in the incident
+report on your phone, in your own words.
+You receive the vehicle, the impact telemetry Caldova recorded and the photo you took of the damage.
+Write a short, natural first-person account (3 to 5 sentences, UK English) of what happened: where you were
+parking, what you hit or what hit you, how fast you were going, and what you can see on the car.
+It must match the photo and the telemetry. Do not exaggerate. Do not mention injuries, emergency services,
+insurance, liability, costs or garages. Do not include names, phone numbers, email addresses, registration
+numbers or exact addresses.
+Return only a JSON object: {"description": string, "safe": true, "injuries": false}."""
+
 
 def validate_project_endpoint(endpoint: str) -> str:
     parsed = urlparse(endpoint)
@@ -44,10 +56,10 @@ class EvidenceResult:
 
 
 class FoundryEvidenceAgent:
-    def __init__(self, config: dict, credential):
+    def __init__(self, config: dict, credential, *, agent_name: str | None = None, agent_version: str | None = None):
         self.endpoint = validate_project_endpoint(config["foundry_project_endpoint"])
-        self.agent_name = config["foundry_agent_name"]
-        self.agent_version = config["foundry_agent_version"]
+        self.agent_name = agent_name or config["foundry_agent_name"]
+        self.agent_version = agent_version or config["foundry_agent_version"]
         self.credential = credential
 
     def invoke(self, instructions: str, text: str, image: bytes | None = None) -> EvidenceResult:

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal agents vs Always-on agents</title>
+<style>
+  :root {
+    --bg: #f7f8fb; --panel: #ffffff; --line: #dde3ee; --text: #172033; --muted: #5d6a82;
+    --fabric: #0f9d7a; --foundry: #8a4fd1; --studio: #2470d6; --app: #4a5670; --m365: #e05a24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e9edf4; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); overflow: hidden; }
+  .slide {
+    width: 1600px; height: 900px; padding: 48px 72px 44px; position: absolute; left: 50%; top: 50%; margin: -450px 0 0 -800px;
+    background: radial-gradient(900px 600px at 18% 60%, #fff0e8 0%, transparent 60%),
+                radial-gradient(900px 600px at 82% 60%, #e6efff 0%, transparent 60%), var(--bg);
+    display: grid; grid-template-rows: auto 1fr; gap: 34px; transform-origin: center;
+  }
+  .eyebrow { color: var(--muted); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: 16px; margin-bottom: 10px; }
+  h1 { font-size: 50px; font-weight: 700; letter-spacing: -.02em; }
+  h1 .p { color: var(--m365); } h1 .a { color: var(--studio); } h1 .vs { color: #a3afc4; font-weight: 400; margin: 0 10px; }
+
+  .split { display: grid; grid-template-columns: 1fr 90px 1fr; align-items: stretch; }
+  .vs-dot { align-self: center; justify-self: center; width: 64px; height: 64px; border-radius: 50%; background: #fff; border: 1px solid var(--line);
+    display: grid; place-items: center; font-weight: 700; color: #8a97b0; font-size: 20px; box-shadow: 0 4px 14px #1720331a;
+    opacity: 0; animation: show .5s ease .9s forwards; }
+  .side { background: var(--panel); border: 1px solid var(--line); border-radius: 26px; box-shadow: 0 6px 24px #17203314; padding: 30px 34px 30px;
+    display: grid; grid-template-rows: auto 1fr auto; gap: 8px; opacity: 0; transform: translateY(16px); animation: in .65s cubic-bezier(.2,.7,.2,1) forwards; }
+  .side.right { animation-delay: .5s; border-color: #c6d6f2; }
+  .side.left { border-color: #f1cbb9; }
+  .side h2 { font-size: 34px; font-weight: 700; }
+  .left h2 { color: var(--m365); } .right h2 { color: var(--studio); }
+  .tag { font-size: 26px; font-weight: 600; } .left .tag { color: var(--m365); } .right .tag { color: var(--studio); }
+  .art { display: grid; place-items: center; }
+  .art svg { width: 100%; height: 360px; overflow: visible; }
+  .traits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .trait { border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+  .trait svg { width: 22px; height: 22px; flex: none; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .left .trait { background: #fff4ee; color: #a94418; } .left .trait svg { stroke: var(--m365); }
+  .right .trait { background: #eef4ff; color: #1b55a6; } .right .trait svg { stroke: var(--studio); }
+
+  .person { fill: #fff; stroke-width: 3; }
+  .bubble { opacity: 0; animation: show .4s ease forwards; }
+  .orbit { transform-origin: 280px 180px; animation: spin 60s linear infinite; }
+  .orbit .sat { transform-box: fill-box; transform-origin: center; animation: spin 60s linear infinite reverse; }
+  .ray { stroke: #a9c1ea; stroke-width: 2; stroke-dasharray: 4 6; animation: flow 1.2s linear infinite; }
+  .pulse { transform-origin: 280px 180px; animation: pulse 2.6s ease-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes flow { to { stroke-dashoffset: -20; } }
+  @keyframes pulse { from { transform: scale(.7); opacity: .55; } to { transform: scale(1.9); opacity: 0; } }
+  @keyframes in { to { opacity: 1; transform: none; } }
+  @keyframes show { to { opacity: 1; } }
+  .hint { position: fixed; bottom: 10px; right: 14px; color: #9aa6bb; font-size: 12px; }
+  @media print { @page { size: 1600px 900px; margin: 0; } .hint { display: none } .slide { transform: none !important; position: relative; left: 0; top: 0; margin: 0; } * { animation: none !important; opacity: 1 !important; transform: none !important; } }
+</style>
+</head>
+<body>
+<section class="slide" id="slide">
+  <header>
+    <div class="eyebrow">Two kinds of agents</div>
+    <h1><span class="p">Personal agents</span><span class="vs">vs</span><span class="a">Always-on agents</span></h1>
+  </header>
+
+  <div class="split">
+    <article class="side left">
+      <p class="tag">Works with me, when I ask</p>
+      <div class="art">
+        <svg viewBox="0 0 560 360">
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#e8a688"/></marker></defs>
+          <g transform="translate(120 190)">
+            <circle r="78" fill="#fff4ee"/>
+            <circle cy="-22" r="24" class="person" stroke="var(--m365)"/>
+            <path d="M-40 42c0-24 18-40 40-40s40 16 40 40" class="person" stroke="var(--m365)"/>
+          </g>
+          <g transform="translate(440 190)">
+            <circle r="78" fill="#fff4ee"/>
+            <rect x="-38" y="-30" width="76" height="62" rx="16" fill="var(--m365)"/>
+            <path d="M0 -30v-14" stroke="var(--m365)" stroke-width="4" stroke-linecap="round"/><circle cy="-48" r="6" fill="var(--m365)"/>
+            <circle cx="-14" cy="-2" r="6" fill="#fff"/><circle cx="14" cy="-2" r="6" fill="#fff"/><path d="M-12 16h24" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          </g>
+          <path d="M210 160 C 260 120, 310 120, 360 160" fill="none" stroke="#e8a688" stroke-width="3" marker-end="url(#ah)"/>
+          <path d="M360 222 C 310 262, 260 262, 210 222" fill="none" stroke="#e8a688" stroke-width="3" marker-end="url(#ah)"/>
+          <g class="bubble" style="animation-delay:.7s"><rect x="236" y="70" width="88" height="40" rx="20" fill="#fff" stroke="#f1cbb9"/><circle cx="262" cy="90" r="4" fill="var(--m365)"/><circle cx="280" cy="90" r="4" fill="var(--m365)"/><circle cx="298" cy="90" r="4" fill="var(--m365)"/></g>
+          <g class="bubble" style="animation-delay:1s"><rect x="226" y="270" width="108" height="40" rx="20" fill="#fff" stroke="#f1cbb9"/><path d="M248 290h64M248 290" stroke="var(--m365)" stroke-width="4" stroke-linecap="round"/></g>
+        </svg>
+      </div>
+      <div class="traits">
+        <div class="trait"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>One person</div>
+        <div class="trait"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>On demand</div>
+        <div class="trait"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>My access</div>
+      </div>
+    </article>
+
+    <div class="vs-dot">vs</div>
+
+    <article class="side right">
+      <p class="tag">Works for everyone, 24/7</p>
+      <div class="art">
+        <svg viewBox="0 0 560 360">
+          <circle cx="280" cy="180" r="150" fill="none" stroke="#dbe6f8" stroke-width="2"/>
+          <circle cx="280" cy="180" r="60" fill="#2470d6" class="pulse"/>
+          <g class="orbit">
+            <g id="rays"></g>
+            <g id="sats"></g>
+          </g>
+          <circle cx="280" cy="180" r="66" fill="#eef4ff"/>
+          <rect x="238" y="146" width="84" height="68" rx="18" fill="var(--studio)"/>
+          <path d="M280 146v-14" stroke="var(--studio)" stroke-width="4" stroke-linecap="round"/><circle cx="280" cy="128" r="6" fill="var(--studio)"/>
+          <circle cx="264" cy="174" r="6.5" fill="#fff"/><circle cx="296" cy="174" r="6.5" fill="#fff"/><path d="M267 194h26" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+          <g transform="translate(470 30)"><rect x="-44" y="-20" width="88" height="40" rx="20" fill="var(--studio)"/><text x="0" y="7" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">24/7</text></g>
+        </svg>
+      </div>
+      <div class="traits">
+        <div class="trait"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.9-.4 5.5 1.8 5.5 5.8"/></svg>Everyone</div>
+        <div class="trait"><svg viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></svg>Event-triggered</div>
+        <div class="trait"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="12" cy="10" r="3"/><path d="M7.5 17c.8-2 2.5-3 4.5-3s3.7 1 4.5 3"/></svg>Its own identity</div>
+      </div>
+    </article>
+  </div>
+</section>
+<div class="hint">F = full screen · P = print / PDF</div>
+<script>
+  const slide = document.getElementById("slide");
+  const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
+  addEventListener("resize", fit); fit();
+  if (window !== top) document.querySelector(".hint").style.display = "none";
+  const icons = {
+    person: '<circle cx="0" cy="-6" r="7" fill="none" stroke="C" stroke-width="3"/><path d="M-12 12c0-7 5-11 12-11s12 4 12 11" fill="none" stroke="C" stroke-width="3" stroke-linecap="round"/>',
+    mail: '<rect x="-13" y="-9" width="26" height="18" rx="3" fill="none" stroke="C" stroke-width="3"/><path d="M-13 -7l13 9 13-9" fill="none" stroke="C" stroke-width="3" stroke-linejoin="round"/>',
+    signal: '<path d="M-14 0h6l4-10 8 20 4-10h6" fill="none" stroke="C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+    clock: '<circle r="13" fill="none" stroke="C" stroke-width="3"/><path d="M0 -7v7l5 4" fill="none" stroke="C" stroke-width="3" stroke-linecap="round"/>',
+    garage: '<path d="M-14 12V-2L0 -12 14 -2v14M-8 12V2h16v10" fill="none" stroke="C" stroke-width="3" stroke-linejoin="round"/>',
+  };
+  const ring = ["person", "mail", "person", "signal", "person", "garage", "person", "clock"];
+  const colors = { person: "#2470d6", mail: "#4a5670", signal: "#0f9d7a", clock: "#8a4fd1", garage: "#4a5670" };
+  let rays = "", sats = "";
+  ring.forEach((kind, i) => {
+    const t = i / ring.length * Math.PI * 2 - Math.PI / 2, x = 280 + 150 * Math.cos(t), y = 180 + 150 * Math.sin(t);
+    rays += `<line class="ray" x1="280" y1="180" x2="${x}" y2="${y}" style="animation-delay:${-i * .15}s"/>`;
+    sats += `<g class="sat" style="opacity:0;animation:spin 60s linear infinite reverse, show .4s ease ${.8 + i * .08}s forwards"><circle cx="${x}" cy="${y}" r="30" fill="#fff" stroke="#c6d6f2" stroke-width="2"/><g transform="translate(${x} ${y})">${icons[kind].replaceAll("C", colors[kind])}</g></g>`;
+  });
+  document.getElementById("rays").innerHTML = rays;
+  document.getElementById("sats").innerHTML = sats;
+  addEventListener("keydown", e => {
+    if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (e.key === "p" || e.key === "P") print();
+  });
+</script>
+</body>
+</html>

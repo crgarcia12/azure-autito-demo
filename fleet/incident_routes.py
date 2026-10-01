@@ -13,6 +13,7 @@ from aiohttp import web
 from pydantic import BaseModel, ConfigDict, Field
 
 from fleet.config import ROOT
+from fleet.customer_agent import simulate_customer
 from fleet.domain import utc_text
 from fleet.insurance import CustomerReport, IncidentError, Incidents, insurance_config
 from fleet.repair_workflow import RepairWorkflow
@@ -219,6 +220,12 @@ async def follow_up(request):
     return web.json_response(result)
 
 
+async def simulate_customer_report(request):
+    repairs = request.app["repairs"]
+    result = await asyncio.to_thread(simulate_customer, request.app["incidents"], repairs.evidence, request.match_info["case"])
+    return web.json_response({"id": result["id"], "status": result["status"]})
+
+
 async def insurance_health(request):
     store, config = request.app["store"], request.app["config"]
     return web.json_response({
@@ -247,6 +254,7 @@ def attach(app):
     app.router.add_post("/api/incidents/{case}/link", report_link)
     app.router.add_post("/api/incidents/{case}/approve", approve)
     app.router.add_post("/api/incidents/{case}/request-evidence", follow_up)
+    app.router.add_post("/api/incidents/{case}/simulate-customer", simulate_customer_report)
     app.router.add_get("/api/incidents/{case}/photos/{photo}", photo)
     app.router.add_get("/api/incidents/{case}/brief.pdf", pdf)
     app.router.add_get("/api/insurance/health", insurance_health)

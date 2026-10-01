@@ -182,9 +182,9 @@ DECK_JS = """
   const deckAgents = __AGENTS__;
   const deckPrompts = [...document.querySelectorAll(".pslide")];
   const deckFrames = Object.fromEntries([...document.querySelectorAll(".xframe")].map(f => [f.dataset.id, f]));
-  const deckSeq = [{ frame: "intro" }, { mode: "biz" }, { mode: "tech" }];
+  const deckSeq = [{ frame: "iq" }, { frame: "kinds" }, { mode: "biz" }, { mode: "tech" }];
   deckAgents.forEach((a, k) => deckSeq.push({ mode: "tech", agent: k }, { mode: "tech", agent: k, prompt: true }));
-  deckSeq.push({ mode: "tech" }, { frame: "agents" });
+  deckSeq.push({ mode: "tech" }, { frame: "agents" }, { frame: "intro" });
   let deckAt = -1, flowSeen = false;
   const deckFit = () => document.documentElement.style.setProperty("--s", Math.min(innerWidth / 1600, innerHeight / 900));
   const replayFlow = () => {
@@ -195,12 +195,16 @@ DECK_JS = """
     const prev = deckSeq[deckAt];
     deckAt = Math.min(Math.max(n, 0), deckSeq.length - 1);
     const st = deckSeq[deckAt], a = deckAgents[st.agent];
-    Object.entries(deckFrames).forEach(([id, f]) => f.classList.toggle("on", st.frame === id));
+    Object.entries(deckFrames).forEach(([id, f]) => {
+      const on = st.frame === id;
+      if (on && !f.classList.contains("on")) f.src = f.getAttribute("src");
+      f.classList.toggle("on", on);
+    });
     deckPrompts.forEach((p, k) => p.classList.toggle("on", !!st.prompt && k === st.agent));
     document.getElementById("deckPos").textContent = `${deckAt + 1} / ${deckSeq.length}`;
     history.replaceState(null, "", `#${deckAt + 1}`);
     if (st.frame) return;
-    if (!flowSeen || (prev && prev.frame === "intro")) { flowSeen = true; replayFlow(); }
+    if (!flowSeen || (prev && prev.frame)) { flowSeen = true; replayFlow(); }
     steps.forEach(el => { el.classList.remove("hl"); el.style.removeProperty("--hc"); });
     track.querySelectorAll(".x3 span").forEach(el => el.classList.remove("hl"));
     if (st.mode !== mode) setMode(st.mode); else steps.forEach(el => el.style.transitionDelay = "0s");
@@ -234,6 +238,8 @@ DECK_JS = """
 """
 
 FRAMES = """
+<iframe class="xframe" data-id="iq" src="iq.html" tabindex="-1" title="Microsoft IQ"></iframe>
+<iframe class="xframe" data-id="kinds" src="agent-kinds.html" tabindex="-1" title="Personal agents vs Always-on agents"></iframe>
 <iframe class="xframe" data-id="intro" src="intro.html" tabindex="-1" title="The story"></iframe>
 <iframe class="xframe" data-id="agents" src="agents.html" tabindex="-1" title="Agents and triggers"></iframe>
 <div class="deck-nav"><button data-nav="-1" aria-label="Previous">‹</button><span id="deckPos"></span><button data-nav="1" aria-label="Next">›</button></div>

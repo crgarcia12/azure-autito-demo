@@ -219,6 +219,40 @@ function renderSelected() {
     button.textContent = "Open incident";
     button.addEventListener("click", () => window.openIncident?.(vehicle.IncidentId));
     $("selected-vehicle").insertBefore(button, $("clear-selection"));
+    delete state.simulating?.[vehicle.VehicleId];
+  } else {
+    state.simulating ||= {};
+    const pending = state.simulating[vehicle.VehicleId];
+    const button = document.createElement("button");
+    button.className = "button button-dark";
+    button.textContent = pending ? "Detecting impact…" : "Simulate incident";
+    button.disabled = Boolean(pending);
+    button.addEventListener("click", async () => {
+      button.disabled = true; button.textContent = "Detecting impact…";
+      state.simulating[vehicle.VehicleId] = true;
+      try {
+        await api("/api/telemetry/impact", { vehicle_id: vehicle.VehicleId, event_id: crypto.randomUUID() });
+        toast(`Impact telemetry for ${vehicle.Registration} sent to Fabric. Waiting for Fabric to open the incident…`);
+        for (let attempt = 0; attempt < 40; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          const { cases } = await api("/api/incidents");
+          const opened = cases.find((item) => item.vehicle_id === vehicle.VehicleId && !["closed", "not_an_incident"].includes(item.status));
+          if (opened) {
+            delete state.simulating[vehicle.VehicleId];
+            vehicle.IncidentId = opened.id;
+            toast(`Fabric opened incident ${opened.id} for ${vehicle.Registration}.`);
+            await window.openIncident?.(opened.id);
+            return;
+          }
+        }
+        throw new Error("Fabric has not opened the incident yet. Check that the Fabric capacity is running.");
+      } catch (error) {
+        delete state.simulating[vehicle.VehicleId];
+        button.disabled = false; button.textContent = "Simulate incident";
+        toast(error.message);
+      }
+    });
+    $("selected-vehicle").insertBefore(button, $("clear-selection"));
   }
 }
 
