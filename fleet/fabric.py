@@ -143,9 +143,12 @@ class FabricData:
         )
 
     def refresh_lakehouse(self) -> dict:
+        mileage = self.query("FleetDailyMileage()")
+        for row in mileage:
+            row["MileageId"] = f"{row['VehicleId']}|{row['ReportDate']}"
         tables = {
             "VehicleState": self.latest(),
-            "DailyMileage": self.query("FleetDailyMileage()"),
+            "DailyMileage": mileage,
         }
         cases = Incidents(StateStore()).list()
         if cases:
@@ -164,6 +167,7 @@ class FabricData:
             } for case in cases]
             policy = insurance_config()
             quotes = [{
+                "QuoteId": f"{case['id']}|{quote['garage_id']}",
                 "CaseId": case["id"], "VehicleId": case["vehicle_id"], "GarageId": quote["garage_id"],
                 "AmountGBP": float(quote["amount_gbp"]), "AvailableFrom": quote["available_from"],
                 "ReadyBy": quote["ready_by"], "ValidUntil": quote["valid_until"],

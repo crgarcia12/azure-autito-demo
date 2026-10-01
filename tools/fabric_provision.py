@@ -24,13 +24,14 @@ def provision_data() -> None:
     save_state(state)
     databases = cloud.pages(f"{FABRIC}/workspaces/{workspace}/kqlDatabases")
     database = next(
-        (db for db in databases if db["displayName"] in {"FleetTelemetry", "CaldovaFleet"}),
+        (db for db in databases if db["displayName"] == "CaldovaFleet"
+         and db.get("properties", {}).get("parentEventhouseItemId") in {None, eventhouse["id"]}),
         None,
     )
     if database is None:
         database = cloud.request(
             "POST", f"{FABRIC}/workspaces/{workspace}/kqlDatabases",
-            {"displayName": "FleetTelemetry", "creationPayload": {
+            {"displayName": "CaldovaFleet", "creationPayload": {
                 "databaseType": "ReadWrite", "parentEventhouseItemId": eventhouse["id"],
             }},
         )

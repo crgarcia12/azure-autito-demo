@@ -41,12 +41,14 @@ def load_state() -> dict[str, Any]:
     return state
 
 
-def save_state(state: dict[str, Any]) -> None:
+def save_state(state: dict[str, Any], *, remove_keys: tuple[str, ...] = ()) -> None:
     if STATE_PATH.exists():
         existing = json.loads(STATE_PATH.read_text(encoding="utf-8"))
         if existing.get("tenant_id") != CONFIG["tenant_id"]:
             raise RuntimeError("Refusing to overwrite another tenant's deployment state.")
         state = {**existing, **state}
+    for key in remove_keys:
+        state.pop(key, None)
     state["tenant_id"] = CONFIG["tenant_id"]
     state["subscription_id"] = CONFIG["subscription_id"]
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)

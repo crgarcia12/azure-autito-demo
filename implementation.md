@@ -18,6 +18,9 @@ Everything is scoped to **Caldova**:
 | Shared F2 capacity | `apollofabric08667473` in Sweden Central |
 | Copilot Studio environment | `Default-b6883271-971b-4198-92a5-8ad615765572` |
 | Dataverse | `https://org1a562eb0.crm.dynamics.com` |
+| Foundry resource | `caldovadrive08667473-foundry` (`AIServices`, project management enabled) |
+| Foundry project | `caldova-insurance` |
+| Foundry evidence agent | `caldova-incident-evidence`, version `2` |
 | Authorized operator | `admin@caldova08667473.onmicrosoft.com` |
 | Browser profile | Edge **Work 2 Profile**, identity verified as Caldova |
 
@@ -41,13 +44,13 @@ The selected Metro option in the verified cases is **GBP 600 repair + two calend
 
 **Real versus generated:** telemetry, rental identities and garage rate/capacity data are generated for the demonstration. The Fabric rule, pipeline, data agent, four Copilot Studio agents, image-model calls, emails, PDF generation, authentication, uploads and approval processing are real. The phone notification is an in-app preview, not a paid SMS.
 
-**Validation:** 51 unit/API tests pass, including an additional run with cloud configuration and credentials deliberately unavailable. A separate hosted browser run uses a legitimate user-delegated Caldova token and checks the deployed application, all 40 map markers, quote comparison, emails, mobile layout and access boundaries. The core real-service and hosted end-to-end runs are recorded below.
+**Validation:** 62 unit/API tests pass after the Foundry integration. The earlier 51-test suite also passed with cloud configuration and credentials deliberately unavailable. A separate hosted browser run uses a legitimate user-delegated Caldova token and checks the deployed application, all 40 map markers, quote comparison, emails, mobile layout and access boundaries. The core real-service and hosted end-to-end runs are recorded below.
 
 **Microsoft 365:** in the same Caldova profile, open [Microsoft 365 Copilot](https://m365.cloud.microsoft/chat/?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572), select **Agents > Caldova Fleet IQ** (created by Fabric Data Agent), and ask which repairs await approval. A real Microsoft 365 conversation returned `CDI-168C31C660` and `metro` from the live data after the capacity was resumed.
 
 **Work IQ:** switch to the main Copilot chat with Work IQ enabled and ask: “Find the email from Caldova Claims Operations about case CDI-168C31C660. Summarize the repair recommendation, its cost trade-off, and what I need to approve. Cite the email.” This was tested: Copilot found the actual delivered email, cited its subject, and explained the GBP 800 Metro recommendation.
 
-**Final build verified:** `ba5a179f9713fc84`. At final handoff the hosted worker was running, all five case states were persisted, all four native anonymous token endpoints returned HTTP 403, credential-authenticated agent execution had passed, and the awaiting-approval case was open in the confirmed Caldova Edge profile.
+**Current build verified:** `c7b7fa81d26b90fb`, including the Foundry cutover. The hosted worker is running, the prepared case states remain persisted, the four Copilot Studio channels use protected credentials, and evidence processing uses the real Foundry project agent. The earlier overnight build was `ba5a179f9713fc84`.
 
 ## Status at the start of autonomous implementation
 
@@ -147,7 +150,7 @@ The local browser smoke test expects a live preview at `http://127.0.0.1:8097`. 
 - User-dependent sign-ins cannot be completed by guessing passwords or bypassing MFA. Such blockers will be recorded instead of replaced by fake integrations.
 - Work IQ is an explicit integration, not a label for ordinary Graph or Outlook connector automation.
 - The workflow sends the operator actual decision/booking emails so Microsoft 365 Copilot can use its authorized work context. Both Exchange delivery and actual Work IQ retrieval/citation were verified. Indexing remains asynchronous; no custom Work IQ MCP write connection is claimed.
-- Foundry IQ knowledge-base retrieval is not configured. Photo processing uses a real regional Azure OpenAI model; the business agents run in Copilot Studio.
+- Photo processing now uses a real **Microsoft Foundry resource, project and versioned evidence agent**. The standalone `caldovadrive08667473-ai` OpenAI account was removed after the hosted Foundry workflow passed. The agent uses a GPT-4.1 model deployment inside Foundry; the protocol's OpenAI-compatible naming does not mean a standalone OpenAI resource exists. Foundry IQ knowledge-base retrieval is a separate feature and is not claimed here.
 - Direct attachment of the generation-2 ontology to the data agent failed schema discovery in this tenant. The working published agent reads the same governed Lakehouse data bound by the ontology.
 - There is no native Fabric feature named “Evidence Map” or “Governed Binding”. Any incident evidence presentation is application functionality.
 - Sending a message and persisting its receipt are not one transaction; unknown outcomes must be reconciled rather than blindly retried.
@@ -221,6 +224,7 @@ The local browser smoke test expects a live preview at `http://127.0.0.1:8097`. 
 | Governed facts | `FleetIntelligence` Lakehouse: seven tables, including actual `Incidents` and `RepairQuotes` projections |
 | Digital-twin context | `Caldova_Fleet_Digital_Twin` ontology |
 | Natural-language data access | `Caldova Fleet IQ` Fabric data agent, also published to Microsoft 365 |
+| Photo evidence agent | Foundry → `caldovadrive08667473-foundry` → `caldova-insurance` → `caldova-incident-evidence` |
 | Repair agents | Four native Copilot Studio workspaces under `copilot\`, in the Caldova default Power Platform environment |
 | Original emails | Four dedicated shared mailboxes; the app displays the actual message bodies, timestamps and Outlook links |
 | Work context | Two real emails delivered to the operator: the pending decision and the confirmed booking |
@@ -234,6 +238,7 @@ The local browser smoke test expects a live preview at `http://127.0.0.1:8097`. 
 | `tools\insurance_fabric.py` | Actual Fabric schema, authenticated Web connection, pipeline and Activator deployment |
 | `fleet\insurance.py`, `fleet\storage.py` | Transactional case state, access tokens, histories, quote policy, approvals and leases |
 | `fleet\evidence.py` | Image validation, private originals, actual vision inference, privacy masks/check and PDF |
+| `fleet\foundry.py`, `infra\foundry.bicep`, `tools\provision_foundry.py` | Actual Foundry resource/project, versioned evidence agent, agent endpoint and project-scoped runtime authorization |
 | `fleet\studio.py`, `copilot\` | Actual published native agents and server-side Direct Line invocation |
 | `fleet\mail.py`, `fleet\repair_workflow.py` | Scoped real mail transport, receipts, inbox events, native-agent orchestration and booking |
 | `fleet\incident_routes.py`, `fleet\web.py` | Authenticated operator APIs, public capability-link customer APIs and workers |
@@ -249,7 +254,7 @@ The local browser smoke test expects a live preview at `http://127.0.0.1:8097`. 
 
 1. **Fleet overview, 45 seconds:** show 40 cars and the vehicles needing attention.
 2. **Signal to case, 60–90 seconds:** use a vehicle without an active case and select **Send impact telemetry**, or open the fresh BMW case to avoid waiting during a short presentation. Show the Fabric source event and pipeline provenance.
-3. **Customer intake, 60 seconds:** open the phone-message preview, follow the secure link, upload `static\demo-assets\bumper-detail.jpg`, enter a brief account and submit.
+3. **Customer intake, 60 seconds:** open the phone-message preview, follow the secure link, upload `static\demo-assets\bumper-dent.jpg`, enter a brief account and submit.
 4. **Evidence and correspondence, 60 seconds:** show the protected original, redacted copy/PDF, and original quotation requests and replies. For a time-bounded presentation, use the already prepared Volvo case.
 5. **Business decision, 60 seconds:** compare GBP 450/600/550 repair quotes and their different completion dates. Move the downtime slider to zero and back to GBP 100 to explain why the recommendation changes. The actual approval policy is not changed.
 6. **Approval, 30–60 seconds:** click **Approve & book** on the Volvo case. Wait for the real Metro confirmation and show the distinct approval and confirmation events.
@@ -300,4 +305,18 @@ For a new, fully hosted verification using the actual primary Fabric trigger and
 
 This command deliberately creates a real demo incident, uploads the approved evidence asset, sends real internal emails and exercises approval. It chooses an available vehicle rather than changing the prepared awaiting-approval case.
 
-The source image is public domain: [Jetta Mk. IV Bumper Damage, TWikisto](https://commons.wikimedia.org/wiki/File:Jetta_Mk._IV_Bumper_Damage.jpg). `static\demo-assets\attribution.txt` records the source and crop. The cropped lower-bumper photo exercises the quotation path; the original full view is retained to exercise an inspection-required branch. These are test/presentation artifacts, not customer photographs.
+Image sources and licensing are recorded in `static\demo-assets\attribution.txt`. The clearer Foundry-positive input is [Dented car bumper, Mark Holmberg](https://www.publicdomainpictures.net/en/view-image.php?image=498350&picture=dented-car-bumper), released under CC0. The older [Jetta Mk. IV Bumper Damage, TWikisto](https://commons.wikimedia.org/wiki/File:Jetta_Mk._IV_Bumper_Damage.jpg) is public domain; its full view supports an inspection-required branch. Foundry correctly treated the old faint cropped detail as insufficient evidence rather than inventing damage. No image was altered to force a model decision.
+
+## Foundry cutover, 1 October 2026
+
+- Created an actual `AIServices` Foundry resource with managed identity and project management, plus the `caldova-insurance` project. No new VNet or private endpoint was created.
+- Deployed `incident-vision` inside Foundry and registered `caldova-incident-evidence:2` in Foundry Agent Service. Its endpoint routes 100% to that version.
+- The operator has project-scoped Foundry Project Manager access. The application managed identity has project-scoped Foundry Agent Consumer access.
+- The application uses the supported Foundry agent Responses endpoint under `services.ai.azure.com/api/projects/.../agents/...`, not a standalone model endpoint. JSON mode and sampling settings belong to the managed agent definition.
+- Each report records the actual Foundry agent, version, project endpoint and response IDs for photo inspection, privacy verification and report assembly.
+- The first uploaded fixture was honestly routed for review because it lacked clear visible damage. A verified CC0 photograph with a visible bumper dent passed without weakening the review guardrails.
+- The Azure user session encountered a Continuous Access Evaluation challenge. It was renewed through Microsoft's supported device sign-in using only the Caldova account.
+- A cold Fabric pipeline callback arrived after the three-minute reconciliation window. The incident was preserved by reconciliation; that run is not claimed as a successful primary-trigger timing test.
+- **Hosted Foundry-backed workflow passed:** case `CDI-447819C9E7`, CD-006, reached `booked` after three real Foundry responses, all real Copilot Studio quotation agents, actual email, operator approval and Metro confirmation. Measured time from continuing the detected case: **173.41 seconds**.
+- Only after that verification, `tools\retire_openai.py` removed the superseded `caldovadrive08667473-ai` account and cleared obsolete endpoint settings. All operational case data and the new Foundry resource were retained.
+- `storyline.md` provides the requested chronological story, what to open, feature names and presenter narration for all 15 steps.

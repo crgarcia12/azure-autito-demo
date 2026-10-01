@@ -6,7 +6,7 @@
 
 The customer tells the story once. The insurer, rental operations team and repair centres work from the same case.
 
-This walkthrough uses the requested **Microsoft Foundry** architecture for evidence processing. The Foundry cutover is currently being completed; deployment and verification status are recorded in [implementation.md](implementation.md).
+This walkthrough uses the deployed **Microsoft Foundry** resource, project and evidence agent. The standalone Azure OpenAI account has been removed. Deployment and verification details are recorded in [implementation.md](implementation.md).
 
 ## Open these before presenting
 
@@ -30,7 +30,7 @@ For a short presentation, use the prepared cases at the matching stage. For a fr
 
 **Story:** Alex is driving a rental car in London. Caldova can see the vehicle's operational state and connect it to the rental and branch.
 
-**Open and do:** Start on the dashboard's **Overview**. Show the fleet map, select a London car, and show its location, speed, energy level and status. In Fabric, open **Caldova_Fleet_Digital_Twin** if you want to show how Vehicle, Rental and Branch relate.
+**Open and do:** Start on the dashboard's **Overview**. Show the fleet map, select a London car, and show its location, speed, energy level and status. Optional: open the Fabric ontology **Caldova_Fleet_Digital_Twin** in **Full ontology** view for 20 seconds to show Vehicle → Branch and Rental → Vehicle. The full ontology walkthrough is in [step 14](#14-show-the-ontology-behind-the-case).
 
 **Feature:** Azure Maps; Fabric Eventhouse telemetry; Fabric IQ ontology and business context.
 
@@ -67,7 +67,7 @@ The current rule checks:
 
 **Say:** “Fabric turns the sensor event into an operational action. It opens the right case instead of sending someone an unstructured alert to investigate from scratch.”
 
-**Presentation timing:** This configuration polls KQL every minute. The verified native trigger opened a case in about 92 seconds. Use that time to explain the detection rule or switch to the prepared fresh case for a shorter presentation.
+**Presentation timing:** This configuration polls KQL every minute. A warm native trigger was verified at about 92 seconds; a cold pipeline run took longer than three minutes. Use that time to explain the detection rule or switch to the prepared fresh case for a shorter presentation. Delayed callbacks are reconciled rather than losing the incident.
 
 ## 4. The customer receives a clear next step
 
@@ -212,7 +212,47 @@ Show the native agent's rationale. Move the **downtime cost** slider to zero, th
 
 **Say:** “The customer, the repair centre and the operations team now share one clear next step.”
 
-## 14. Ask Fabric IQ about the live operation
+## 14. Show the ontology behind the case
+
+**Story:** The manager has approved a repair for one car. The business also needs to know how that car relates to the rental, the branch, its mileage and the quotes. The ontology is the shared business model connecting those facts.
+
+**Before presenting (one-off, 2 minutes):**
+
+1. Open the [Fabric workspace](https://app.fabric.microsoft.com/groups/19b68e4b-dd12-4e74-84d9-18fd9f1e2b49/list?experience=fabric). In the item list, select **Caldova_Fleet_Digital_Twin** (type **Ontology**).
+2. Check whether the top ribbon shows **Explore graph**. If it does not, select **Manage graph**. Keep **Use the entire Ontology** selected, then select **Continue** → **Materialize**. Materialization takes a few minutes.
+3. After any data change, open the item **Caldova_Fleet_Digital_Twin_graph_…** (type **Graph model**). Select **Schedule** → **Refresh now** so the graph shows the latest cases.
+
+**Open and do (live, about 3 minutes):**
+
+1. **The business model.** Open **Caldova_Fleet_Digital_Twin**. The canvas opens in **Full ontology** view and shows seven entity types:
+   - **Vehicle**, **Branch** and **Rental**
+   - **VehicleState** (live snapshot), **DailyMileage**
+   - **Incident** and **RepairQuotation**
+
+   Then switch the canvas to **Relationship** view. In the **Explorer** on the left, select **Vehicle** to centre it. Point at its links: Vehicle → Branch, Rental → Vehicle, Incident → Vehicle, RepairQuotation → Incident, and VehicleState/DailyMileage → Vehicle.
+2. **What a "Vehicle" means.** With **Vehicle** selected, choose **View Entity Type details** in the ribbon. Show three things:
+   - The properties: Registration, Make, Model, Powertrain, DailyRateGBP and ServiceDueKm.
+   - The entity type key, **VehicleId**.
+   - The binding to the Lakehouse table **FleetIntelligence → Vehicles**.
+3. **Real instances.** Open the **Instances** tab and find **CD-002**. This is the car in case CDI-168C31C660. These are live rows from OneLake, not a separate copy.
+4. **Business rules.** Open **Incident** the same way and show the rule **RepairApproval** attached to it. ApprovalRecorded is not the same as BookingConfirmed. Then open **DailyMileage** and its rule **MileageAccounting**: kilometres come from DailyMileage.DistanceKm, never from odometer readings.
+5. **The connected graph.** Go back to the ontology canvas and select **Explore graph** in the ribbon.
+   - Select the puzzle piece icon on the right to expand **Components**.
+   - Under **Nodes**, select Incident, Vehicle, Branch, Rental and RepairQuotation. Under **Edges**, select all the edges.
+6. **One case, fully connected.** Select **Path query** in the ribbon and confirm **Switch**. Enter:
+   - **Start node:** Incident, filter **CaseId = CDI-168C31C660**
+   - **End node:** Branch
+   - **Max hops:** 3
+
+   Select **Run**. The canvas draws the incident → car CD-002 (Volvo EX30) → London Heathrow, plus rental R-10402 for Meridian Travel on that car. Add **RepairQuotation** to show the three repair offers (Alder, Metro, Riverside) linked to the same incident.
+
+**Feature:** Fabric IQ ontology: entity types, entity keys, relationships, OneLake data bindings, business rules, and the materialized ontology graph (Graph in Microsoft Fabric).
+
+**Say:** “The dashboard, the Fabric data agent and Copilot all use the same definitions of a vehicle, a rental, an incident and a quote. When we ask Copilot a question next, it is grounded in this model and its rules, not guessing which table means what.”
+
+**If something does not load:** The Instances tab reads the Lakehouse live, so it works even if the graph is still refreshing. If **Explore graph** is missing, stay in **Relationship** view and the **Instances** tab. That still tells the full story.
+
+## 15. Ask Fabric IQ about the live operation
 
 **Story:** The manager wants to know what still needs attention across the fleet, not just in this one case.
 
@@ -228,7 +268,7 @@ Then:
 
 **Say:** “Fabric answers the operational question: what is true in the fleet and case data right now?”
 
-## 15. Ask Work IQ about the communication and reasoning
+## 16. Ask Work IQ about the communication and reasoning
 
 **Story:** The manager needs the original work context behind a decision: what was communicated, and why the recommendation was made.
 
@@ -258,6 +298,7 @@ Use Fabric for current case state and email for the recorded communication. An o
 | [CDI-168C31C660](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-168C31C660) | Quote comparison and the live approval moment |
 | [CDI-05E0A06690](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-05E0A06690) | A completed booking with actual correspondence |
 | [CDI-BCB6A3CE7C](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-BCB6A3CE7C) | Inspection-required guardrail |
+| [CDI-447819C9E7](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-447819C9E7) | Completed Foundry-backed report, three real quotes and confirmed booking |
 
 ## Product names to use accurately
 
