@@ -6,6 +6,46 @@
 
 The customer tells the story once. The insurer, rental operations team and repair centres work from the same case.
 
+## The story at a glance
+
+```mermaid
+flowchart LR
+    subgraph D["1 · Detect"]
+        direction TB
+        S1["1 · Car on the road<br/>live fleet map"] --> S2["2 · Bump while parking<br/>impact telemetry"] --> S3["3 · Fabric detects it<br/>Activator → Pipeline → Case"]
+    end
+    subgraph R["2 · Report"]
+        direction TB
+        S4["4 · Customer gets<br/>a secure link"] --> S5["5 · Photos +<br/>explanation"] --> S6["6 · Foundry writes<br/>the repair brief"]
+    end
+    subgraph X["3 · Decide"]
+        direction TB
+        S7["7 · Coordinator asks<br/>3 repair centres"] --> S8["8 · Three quotes,<br/>different trade-offs"] --> S9["9 · Agent recommends<br/>best business outcome"] --> S10["10 · Manager reviews<br/>the full case"] --> S11["11 · Manager approves"] --> S12["12 · Garage confirms"] --> S13["13 · Customer sees<br/>the next step"]
+    end
+    subgraph U["4 · Understand"]
+        direction TB
+        S14["14 · Ontology + graph<br/>one business model"] --> S15["15 · Fabric IQ<br/>what is true now"] --> S16["16 · Work IQ<br/>what was said and why"]
+    end
+    S3 --> S4
+    S6 --> S7
+    S13 --> S14
+
+    classDef fabric fill:#117865,color:#fff,stroke:#0b5345
+    classDef foundry fill:#6b2fa3,color:#fff,stroke:#4a1f72
+    classDef studio fill:#0f6cbd,color:#fff,stroke:#0a4a82
+    classDef app fill:#f3f2f1,color:#201f1e,stroke:#8a8886
+    classDef m365 fill:#c43e1c,color:#fff,stroke:#8a2b13
+    class S1,S2,S3,S14 fabric
+    class S6 foundry
+    class S7,S8,S9,S12 studio
+    class S4,S5,S10,S11,S13 app
+    class S15,S16 m365
+```
+
+**Colour key:** green = Microsoft Fabric · purple = Microsoft Foundry · blue = Copilot Studio agents · grey = Caldova app and people · orange = Microsoft 365 Copilot (Fabric IQ / Work IQ).
+
+**Opening line:** “A car has a minor bump. In the next few minutes you'll see Fabric detect it, the customer report it once, AI agents collect and compare three repair quotes, and a manager approve the best option. Then we'll ask Copilot what's happening across the whole fleet, and why.”
+
 This walkthrough uses the deployed **Microsoft Foundry** resource, project and evidence agent. The standalone Azure OpenAI account has been removed. Deployment and verification details are recorded in [implementation.md](implementation.md).
 
 ## Open these before presenting

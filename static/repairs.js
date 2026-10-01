@@ -1,6 +1,7 @@
 (() => {
   const labels = { awaiting_report: "Awaiting customer report", assistance_required: "Assistance required", evidence_received: "Analysing evidence", report_review_required: "Evidence review required", report_ready: "Preparing quotations", requesting_quotes: "Sending quotation requests", awaiting_quotes: "Awaiting repair centres", recommendation_ready: "Repair recommendation ready", approved: "Approved · preparing booking", booking_requested: "Awaiting booking confirmation", booked: "Repair booked", closed: "Closed", not_an_incident: "No incident" };
   let chosen = /^CDI-[A-F0-9]{10}$/.test(state.requestedCase || "") ? state.requestedCase : null, current = null, timer, loadedVersion = null;
+  const picks = {}, reasons = {};
   const money = (value) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(Number(value));
   const date = (value) => new Date(value).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const esc = escapeHtml;
@@ -19,7 +20,44 @@
     const recommendation = caseData.recommendation;
     const quotes = recommendation?.quotes || Object.values(caseData.quotes);
     if (!quotes.length) return '<p>Repair-centre quotations will appear here as actual replies arrive.</p>';
-    return `<div class="quote-grid">${quotes.map((quote) => `<article class="quote-card ${recommendation?.garage_id === quote.garage_id ? "winner" : ""}">${recommendation?.garage_id === quote.garage_id ? '<div class="quote-recommend">Recommended option</div>' : ""}<h4>${esc(quote.garage_name || quote.garage_id)}</h4><div class="quote-price">${money(quote.amount_gbp)} <small>incl. VAT</small></div><dl><dt>Start</dt><dd>${esc(quote.available_from)}</dd><dt>Return to service</dt><dd>${esc(quote.ready_by)}</dd><dt>Warranty</dt><dd>${quote.warranty_months} months</dd></dl>${quote.total_expected_gbp ? `<div class="quote-total"><span>Repair + downtime</span><b>${money(quote.total_expected_gbp)}</b></div><p class="quote-exclusions">${quote.downtime_days} calendar days × ${money(recommendation.policy.downtime_cost_per_day)}/day</p>` : ""}<div class="quote-exclusions">${esc(quote.exclusions)}</div></article>`).join("")}</div>`;
+    const decidable = caseData.status === "recommendation_ready" && recommendation?.agent;
+    const selected = decidable ? (picks[caseData.id] || recommendation.garage_id) : caseData.approval?.garage_id;
+    const overridden = caseData.approval?.override;
+    return `<div class="quote-grid${decidable ? " decidable" : ""}">${quotes.map((quote) => {
+      const recommended = recommendation?.garage_id === quote.garage_id, isSelected = selected === quote.garage_id;
+      const badge = [recommended ? '<span class="quote-recommend">Copilot recommends</span>' : "", !decidable && isSelected && overridden ? '<span class="quote-recommend operator">Operator choice</span>' : ""].join("");
+      return `<article class="quote-card ${recommended ? "winner" : ""} ${isSelected ? "selected" : ""}" data-garage="${esc(quote.garage_id)}" data-name="${esc(quote.garage_name || quote.garage_id)}"${decidable ? ' role="radio" tabindex="0" aria-checked="' + isSelected + '"' : ""}>${badge ? `<div class="quote-badges">${badge}</div>` : ""}<h4>${esc(quote.garage_name || quote.garage_id)}</h4><div class="quote-price">${money(quote.amount_gbp)} <small>incl. VAT</small></div><dl><dt>Start</dt><dd>${esc(quote.available_from)}</dd><dt>Return to service</dt><dd>${esc(quote.ready_by)}</dd><dt>Warranty</dt><dd>${quote.warranty_months} months</dd></dl>${quote.total_expected_gbp ? `<div class="quote-total"><span>Repair + downtime</span><b>${money(quote.total_expected_gbp)}</b></div><p class="quote-exclusions">${quote.downtime_days} calendar days × ${money(recommendation.policy.downtime_cost_per_day)}/day</p>` : ""}<div class="quote-exclusions">${esc(quote.exclusions)}</div>${decidable ? `<div class="quote-pick">${isSelected ? "✓ Selected" : "Select this option"}</div>` : ""}</article>`;
+    }).join("")}</div>`;
+  }
+  function decision(caseData) {
+    const recommendation = caseData.recommendation, approval = caseData.approval;
+    const name = (id) => recommendation.quotes.find((quote) => quote.garage_id === id)?.garage_name || id;
+    if (caseData.status === "recommendation_ready" && recommendation.agent) {
+      const pick = picks[caseData.id] || recommendation.garage_id, override = pick !== recommendation.garage_id;
+      return `<div id="override-box" class="override-box" ${override ? "" : "hidden"}><label for="override-reason">You are choosing a different repair centre than Copilot recommended. Why?</label><textarea id="override-reason" maxlength="500" placeholder="e.g. Customer needs the car back sooner; preferred partner for this branch">${esc(reasons[caseData.id] || "")}</textarea></div><button class="button" id="approve-repair">Approve & book ${esc(name(pick))} →</button>`;
+    }
+    if (approval) {
+      return `<p class="approval-record"><b>Approved by ${esc(approval.by)}:</b> ${esc(name(approval.garage_id))}${approval.override ? ` · <b>overrode</b> the Copilot recommendation (${esc(name(approval.recommended_garage_id))}). Reason: “${esc(approval.reason)}”` : " · the Copilot recommendation"}</p><span class="case-status">${esc(labels[caseData.status])}</span>`;
+    }
+    return `<span class="case-status">${esc(labels[caseData.status])}</span>`;
+  }
+  function bindDecision(caseData) {
+    const recommendation = caseData.recommendation;
+    document.querySelectorAll(".quote-grid.decidable .quote-card").forEach((card) => {
+      const choose = () => {
+        picks[caseData.id] = card.dataset.garage;
+        document.querySelectorAll(".quote-grid.decidable .quote-card").forEach((other) => {
+          const on = other === card;
+          other.classList.toggle("selected", on); other.setAttribute("aria-checked", on);
+          other.querySelector(".quote-pick").textContent = on ? "✓ Selected" : "Select this option";
+        });
+        $("override-box").hidden = card.dataset.garage === recommendation.garage_id;
+        $("approve-repair").textContent = `Approve & book ${card.dataset.name} →`;
+      };
+      card.addEventListener("click", choose);
+      card.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); choose(); } });
+    });
+    $("override-reason")?.addEventListener("input", (event) => { reasons[caseData.id] = event.target.value; });
   }
   function renderCase(caseData) {
     current = caseData; loadedVersion = caseData.version;
@@ -30,11 +68,12 @@
       <section class="case-header card"><div class="case-header-top"><div><div class="eyebrow">${esc(caseData.id)}</div><h2>${esc(caseData.vehicle.Make)} ${esc(caseData.vehicle.Model)}</h2><p>${esc(caseData.vehicle.Registration)} · ${esc(caseData.vehicle.City)} · ${date(caseData.created_at)}</p></div><span class="case-status ${esc(caseData.status)}">${esc(labels[caseData.status] || caseData.status)}</span></div><div class="case-stats"><div><b>${number(caseData.telemetry.PeakAccelerationG, 1)} g</b><small>Impact signal</small></div><div><b>${number(caseData.telemetry.DeltaVKmh, 1)} km/h</b><small>Velocity change</small></div><div><b>${Object.keys(caseData.quotes).length}/3</b><small>Garage responses</small></div><div><b>${elapsed} min</b><small>Case progression</small></div></div><div class="case-action-row"><button class="button button-light" id="show-customer-link">Open customer journey ↗</button>${report ? `<a class="button button-light" target="_blank" rel="noreferrer" href="/api/incidents/${esc(caseData.id)}/brief.pdf">Repair brief PDF ↗</a>` : ""}</div><div id="customer-phone"></div></section>
       <div class="case-sections">
       <section class="case-section card"><h3>Incident evidence</h3>${caseData.customer_report ? `<p>${esc(caseData.customer_report.description)}</p><p><b>Customer confirmation:</b> ${caseData.customer_report.safe ? "In a safe place" : "Assistance needed"} · ${caseData.customer_report.injuries ? "Possible injury reported" : "No injuries reported"}</p>` : "<p>The customer has not yet submitted an incident report.</p>"}<div class="case-photos">${caseData.photos.map((photo, index) => `<div><a target="_blank" rel="noreferrer" href="/api/incidents/${esc(caseData.id)}/photos/${photo.id}"><img src="/api/incidents/${esc(caseData.id)}/photos/${photo.id}" alt="Incident photo ${index + 1}"></a><div class="photo-caption">Original evidence · Photo ${index + 1}</div></div>`).join("")}</div>${report ? `<h3>Redacted repair brief</h3><p>${esc(report.summary)}</p><p>${esc(report.redacted_description)}</p><div class="case-photos">${report.photos.map((photo, index) => `<div><img src="/api/incidents/${esc(caseData.id)}/photos/${photo.photo_id}?redacted=true" alt="Privacy-processed photo ${index + 1}"><div class="photo-caption">${photo.privacy_verified ? "Privacy check passed" : "Privacy review required"}</div></div>`).join("")}</div><p><b>Assessment limits:</b> ${report.limitations.map(esc).join(" ")}</p>${report.reasons.length ? `<p>${report.reasons.map(esc).join(" ")}</p>` : ""}` : ""}<div class="fabric-proof">Source: Fabric Eventhouse · ${esc(caseData.telemetry.DetectionRule || "LowSpeedImpact-v1")}<br>Telemetry event: ${esc(caseData.source_event)}<br>A telemetry signal starts a case; it does not confirm liability, coverage or roadworthiness.</div></section>
-      <section class="case-section card"><h3>Repair options</h3>${renderQuotes(caseData)}${recommendation ? `<div class="recommendation"><h3>${agent ? "Copilot Studio recommendation" : "Awaiting agent review"}</h3><p>${esc(recommendation.ai_summary?.operator_summary || recommendation.rationale)}</p><p>${esc(recommendation.ai_summary?.rationale || "")}</p>${caseData.status === "recommendation_ready" && agent ? '<button class="button" id="approve-repair">Approve & book →</button>' : `<span class="case-status">${esc(labels[caseData.status])}</span>`}<small>${agent ? `<a href="${studioLink(agent)}" target="_blank" rel="noreferrer">Open ${esc(agent.name)} in Copilot Studio ↗</a>` : "The explicit cost policy has been applied; a native agent must complete its review before approval."}</small></div>` : ""}${caseData.booking ? `<p><b>Booking confirmed.</b> ${esc(caseData.booking.garage_id)} · expected return ${esc(caseData.booking.ready_by)}. Confirmation email recorded at ${date(caseData.booking.confirmed_at)}.</p>` : ""}</section>
+      <section class="case-section card"><h3>Repair options</h3>${renderQuotes(caseData)}${recommendation ? `<div class="recommendation"><h3>${agent ? "Copilot Studio recommendation" : "Awaiting agent review"}</h3><p>${esc(recommendation.ai_summary?.operator_summary || recommendation.rationale)}</p><p>${esc(recommendation.ai_summary?.rationale || "")}</p>${decision(caseData)}<small>${agent ? `<a href="${studioLink(agent)}" target="_blank" rel="noreferrer">Open ${esc(agent.name)} in Copilot Studio ↗</a>` : "The explicit cost policy has been applied; a native agent must complete its review before approval."}</small></div>` : ""}${caseData.booking ? `<p><b>Booking confirmed.</b> ${esc(caseData.booking.garage_id)} · expected return ${esc(caseData.booking.ready_by)}. Confirmation email recorded at ${date(caseData.booking.confirmed_at)}.</p>` : ""}</section>
       <section class="case-section card"><h3>The actual correspondence</h3><p>Quotation requests and replies from the approved repair network.</p>${caseData.correspondence.map((message) => `<details class="email-item"><summary>${esc(message.subject)}<small>${esc(message.from)} → ${esc(message.to)} · ${message.at ? date(message.at) : ""}</small></summary><pre>${esc(message.body)}</pre>${message.web_url ? `<a href="${esc(message.web_url)}" target="_blank" rel="noreferrer">Open original in Outlook ↗</a>` : ""}</details>`).join("") || "<p>No emails have been dispatched for this case yet.</p>"}</section>
       <section class="case-section card"><h3>Decision trail</h3><div class="case-timeline">${caseData.timeline.map((event) => `<div class="case-event"><b>${esc(event.kind.replaceAll("_", " "))}</b><small>${date(event.at)} · ${esc(event.actor)}</small></div>`).join("")}</div></section></div>`;
     $("show-customer-link").addEventListener("click", showCustomer);
     $("approve-repair")?.addEventListener("click", approveCase);
+    if (recommendation) bindDecision(caseData);
     if (report?.evidence_agent) {
       const evidence = report.evidence_agent;
       const provenance = document.createElement("div");
@@ -81,9 +120,12 @@
   }
   async function approveCase() {
     $("approve-repair").disabled = true;
+    const garage = picks[chosen] || current.recommendation.garage_id;
+    const reason = (reasons[chosen] || "").trim();
     try {
-      await api(`/api/incidents/${chosen}/approve`, { version: current.version });
+      await api(`/api/incidents/${chosen}/approve`, { version: current.version, garage_id: garage, reason: garage === current.recommendation.garage_id ? "" : reason });
       toast("Approved. The booking request will be sent to the selected repair centre.");
+      delete picks[chosen]; delete reasons[chosen];
       loadedVersion = null; await update();
     } catch (error) { toast(error.message); $("approve-repair").disabled = false; }
   }

@@ -128,6 +128,28 @@ def test_approval_requires_fresh_version_and_real_agent_result(cases, case):
         cases.approve(case["id"], result["version"], "operator")
 
 
+def test_operator_can_override_recommendation_with_reason(cases, case):
+    now = datetime.now(UTC)
+    values = quotes(now, case["id"])
+
+    def ready(current):
+        current["quotes"] = {item["garage_id"]: item for item in values}
+        current["recommendation"] = compare_quotes(values, current["created_at"])
+        current["recommendation"]["agent"] = {"id": "native-agent"}
+        current["status"] = "recommendation_ready"
+        return {}
+
+    version = cases.change(case["id"], "quotes_received", "test", ready)["version"]
+    with pytest.raises(IncidentError):
+        cases.approve(case["id"], version, "operator", garage_id="alder")
+    with pytest.raises(IncidentError):
+        cases.approve(case["id"], version, "operator", garage_id="unknown", reason="Preferred partner garage")
+    result = cases.approve(case["id"], version, "operator", garage_id="alder", reason="Customer prefers the cheapest repair")
+    assert result["approval"]["garage_id"] == "alder"
+    assert result["approval"]["recommended_garage_id"] == "metro"
+    assert result["approval"]["override"] is True
+
+
 def test_upload_removes_metadata_and_rejects_non_image():
     image = Image.new("RGB", (500, 300), "#dddddd")
     exif = Image.Exif()

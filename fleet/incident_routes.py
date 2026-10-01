@@ -27,6 +27,8 @@ class ImpactRequest(BaseModel):
 class ApprovalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     version: int = Field(gt=0)
+    garage_id: str | None = Field(default=None, max_length=40)
+    reason: str = Field(default="", max_length=500)
 
 
 class EvidenceFollowUp(ApprovalRequest):
@@ -204,6 +206,7 @@ async def approve(request):
     body = ApprovalRequest.model_validate(await request.json())
     result = request.app["incidents"].approve(
         request.match_info["case"], body.version, request.app["config"]["report_recipient"],
+        garage_id=body.garage_id, reason=body.reason,
     )
     return web.json_response(result)
 

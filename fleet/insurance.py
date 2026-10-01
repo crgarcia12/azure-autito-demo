@@ -311,14 +311,25 @@ class Incidents:
             return {"garage_id": quote.garage_id, "email_id": quote.email_id, "agent_id": quote.agent_id}
         return self.change(quote.case_id, "quote_received", "Copilot Studio", transform)
 
-    def approve(self, case_id: str, version: int, operator: str) -> dict:
+    def approve(self, case_id: str, version: int, operator: str, garage_id: str | None = None, reason: str = "") -> dict:
+        reason = reason.strip()
         def transform(record):
             if record["status"] != "recommendation_ready" or not record.get("recommendation", {}).get("agent"):
                 raise IncidentError("A complete current recommendation is required before booking.")
             fresh = compare_quotes(list(record["quotes"].values()), record["created_at"])
-            if fresh["garage_id"] != record["recommendation"]["garage_id"]:
+            recommended = record["recommendation"]["garage_id"]
+            if fresh["garage_id"] != recommended:
                 raise IncidentError("The recommended option changed. Review it before approval.")
-            record["approval"] = {"by": operator, "at": utc_text(datetime.now(UTC)), "garage_id": fresh["garage_id"]}
+            chosen = garage_id or recommended
+            if chosen not in record["quotes"]:
+                raise IncidentError("Select one of the received repair quotations.", 400)
+            override = chosen != recommended
+            if override and not 10 <= len(reason) <= 500:
+                raise IncidentError("Explain why you are choosing a different repair centre than the recommendation.", 400)
+            record["approval"] = {
+                "by": operator, "at": utc_text(datetime.now(UTC)), "garage_id": chosen,
+                "recommended_garage_id": recommended, "override": override, "reason": reason if override else "",
+            }
             record["status"] = "approved"
             return record["approval"]
         return self.change(case_id, "operator_approved", operator, transform, version=version)

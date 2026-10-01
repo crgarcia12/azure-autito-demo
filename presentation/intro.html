@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caldova Drive — From a bump to a booked repair</title>
+<style>
+  :root {
+    --bg: #0b1220; --panel: #121b2e; --line: #24324d; --text: #e8edf6; --muted: #93a1bb;
+    --fabric: #1fb38f; --foundry: #a46ee0; --studio: #3b8fe8; --app: #c9ced8; --m365: #f0703f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #05080f; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
+  body { display: grid; place-items: center; overflow: hidden; }
+  .slide {
+    width: 1600px; height: 900px; padding: 56px 72px 44px; position: relative; flex: none;
+    background: radial-gradient(1200px 600px at 85% -10%, #16305a 0%, transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, #0f3b33 0%, transparent 60%), var(--bg);
+    display: grid; grid-template-rows: auto 1fr auto; gap: 34px; transform-origin: center;
+  }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+  .eyebrow { color: var(--fabric); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: 16px; margin-bottom: 12px; }
+  h1 { font-size: 54px; font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .lede { margin-top: 14px; font-size: 21px; color: var(--muted); max-width: 1000px; line-height: 1.4; }
+  .brand { text-align: right; color: var(--muted); font-size: 15px; line-height: 1.5; white-space: nowrap; }
+  .brand b { display: block; color: var(--text); font-size: 22px; letter-spacing: .02em; }
+
+  .acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .act {
+    background: linear-gradient(180deg, #16213a 0%, var(--panel) 100%); border: 1px solid var(--line);
+    border-radius: 20px; padding: 26px 24px 22px; display: flex; flex-direction: column; position: relative;
+    opacity: 0; transform: translateY(14px); animation: in .6s ease forwards;
+  }
+  .act:nth-child(1) { animation-delay: .1s } .act:nth-child(2) { animation-delay: .25s }
+  .act:nth-child(3) { animation-delay: .4s } .act:nth-child(4) { animation-delay: .55s }
+  @keyframes in { to { opacity: 1; transform: none; } }
+  .act:not(:last-child)::after {
+    content: ""; position: absolute; right: -17px; top: 40px; width: 12px; height: 12px;
+    border-top: 3px solid #4a5f8c; border-right: 3px solid #4a5f8c; transform: rotate(45deg);
+  }
+  .act-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .num { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 20px; color: #06101f; }
+  .act h2 { font-size: 30px; font-weight: 650; }
+  .q { color: var(--muted); font-size: 17px; margin: 4px 0 18px; font-style: italic; min-height: 46px; }
+  ol { list-style: none; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  li { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start; font-size: 17.5px; line-height: 1.3; }
+  li .s { font-size: 12.5px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 7px; height: 24px; display: grid; place-items: center; margin-top: 1px; }
+  li small { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .chip { font-size: 13.5px; font-weight: 600; padding: 6px 11px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .c-fabric { color: var(--fabric); border-color: color-mix(in srgb, var(--fabric) 45%, transparent); background: color-mix(in srgb, var(--fabric) 10%, transparent); }
+  .c-foundry { color: var(--foundry); border-color: color-mix(in srgb, var(--foundry) 45%, transparent); background: color-mix(in srgb, var(--foundry) 10%, transparent); }
+  .c-studio { color: var(--studio); border-color: color-mix(in srgb, var(--studio) 45%, transparent); background: color-mix(in srgb, var(--studio) 10%, transparent); }
+  .c-app { color: var(--app); border-color: color-mix(in srgb, var(--app) 35%, transparent); background: color-mix(in srgb, var(--app) 7%, transparent); }
+  .c-m365 { color: var(--m365); border-color: color-mix(in srgb, var(--m365) 45%, transparent); background: color-mix(in srgb, var(--m365) 10%, transparent); }
+
+  footer { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center; }
+  .people { display: flex; gap: 28px; color: var(--muted); font-size: 16px; }
+  .people b { color: var(--text); font-weight: 600; }
+  .promise { font-size: 19px; color: var(--text); text-align: right; line-height: 1.35; }
+  .promise em { color: var(--fabric); font-style: normal; font-weight: 600; }
+  .hint { position: fixed; bottom: 10px; right: 14px; color: #3a4762; font-size: 12px; }
+  @media print {
+    @page { size: 1600px 900px; margin: 0; }
+    .hint { display: none } html, body { background: var(--bg); overflow: visible }
+    .slide { transform: none !important } .act { animation: none; opacity: 1; transform: none }
+  }
+</style>
+</head>
+<body>
+<section class="slide" id="slide">
+  <header>
+    <div>
+      <div class="eyebrow">What you are about to see</div>
+      <h1>From a bump to a booked repair <span>— one connected case</span></h1>
+      <p class="lede">A rental customer has a minor bump while parking. Caldova detects it, the customer reports it once, AI agents collect three repair quotes and recommend the best one, and a manager approves. Then we ask Copilot about the whole fleet.</p>
+    </div>
+    <div class="brand"><b>Caldova Drive</b>UK rental fleet · 40 cars · 6 branches</div>
+  </header>
+
+  <div class="acts">
+    <article class="act">
+      <div class="act-head"><div class="num" style="background:var(--fabric)">1</div><h2>Detect</h2></div>
+      <p class="q">“Something happened to one of our cars.”</p>
+      <ol>
+        <li><span class="s">1</span><div>Live fleet on the map<small>location, speed, battery, rental</small></div></li>
+        <li><span class="s">2</span><div>Bump while parking<small>impact telemetry streams in</small></div></li>
+        <li><span class="s">3</span><div>Fabric detects it and opens a case<small>rule → pipeline → incident, no manual triage</small></div></li>
+      </ol>
+      <div class="chips"><span class="chip c-fabric">Fabric Real-Time Intelligence</span><span class="chip c-fabric">Activator</span><span class="chip c-fabric">Data Factory</span></div>
+    </article>
+
+    <article class="act">
+      <div class="act-head"><div class="num" style="background:var(--foundry)">2</div><h2>Report</h2></div>
+      <p class="q">“The customer tells the story once.”</p>
+      <ol>
+        <li><span class="s">4</span><div>Customer gets a secure link<small>clear next step, no account needed</small></div></li>
+        <li><span class="s">5</span><div>Photos and a short explanation<small>uploaded from the phone</small></div></li>
+        <li><span class="s">6</span><div>AI prepares the repair brief<small>damage assessment, privacy-processed</small></div></li>
+      </ol>
+      <div class="chips"><span class="chip c-app">Caldova app</span><span class="chip c-foundry">Microsoft Foundry Agent Service</span></div>
+    </article>
+
+    <article class="act">
+      <div class="act-head"><div class="num" style="background:var(--studio)">3</div><h2>Decide</h2></div>
+      <p class="q">“Which repair is best for the business?”</p>
+      <ol>
+        <li><span class="s">7–8</span><div>Agents request and receive 3 quotes<small>real emails, different price and time trade-offs</small></div></li>
+        <li><span class="s">9</span><div>Best outcome, not just cheapest<small>repair cost + cost of the car off the road</small></div></li>
+        <li><span class="s">10–11</span><div>Manager reviews and approves<small>human in the loop, fully traceable</small></div></li>
+        <li><span class="s">12–13</span><div>Garage confirms, customer sees it</div></li>
+      </ol>
+      <div class="chips"><span class="chip c-studio">Copilot Studio agents</span><span class="chip c-app">Microsoft Graph mail</span></div>
+    </article>
+
+    <article class="act">
+      <div class="act-head"><div class="num" style="background:var(--m365)">4</div><h2>Understand</h2></div>
+      <p class="q">“What is true across the fleet, and why?”</p>
+      <ol>
+        <li><span class="s">14</span><div>One business model<small>ontology + graph: car, rental, branch, case, quote</small></div></li>
+        <li><span class="s">15</span><div>Ask Fabric IQ<small>“Which repairs await my approval?”</small></div></li>
+        <li><span class="s">16</span><div>Ask Work IQ<small>“Why was this garage recommended?”</small></div></li>
+      </ol>
+      <div class="chips"><span class="chip c-fabric">Fabric IQ ontology</span><span class="chip c-m365">Microsoft 365 Copilot</span><span class="chip c-m365">Work IQ</span></div>
+    </article>
+  </div>
+
+  <footer>
+    <div class="people"><span><b>Alex</b> · rental customer</span><span><b>Operations manager</b> · approves</span><span><b>3 repair centres</b> · quote and confirm</span></div>
+    <p class="promise">Signal → case → evidence → quotes → <em>human decision</em> → booking. Every step traceable.</p>
+  </footer>
+</section>
+<div class="hint">F = full screen · P = print / PDF</div>
+<script>
+  const slide = document.getElementById("slide");
+  const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
+  addEventListener("resize", fit); fit();
+  addEventListener("keydown", e => {
+    if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (e.key === "p" || e.key === "P") print();
+  });
+</script>
+</body>
+</html>

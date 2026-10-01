@@ -33,6 +33,8 @@ Do not claim a repair is booked unless Incidents.Status is booked and ExpectedRe
 Status recommendation_ready means the recommendation is awaiting operator approval.
 Use AwaitingOperatorApproval=true to identify those cases, not a literal status named awaiting_approval.
 ApprovalRecorded=true means the operator approved; it does not mean the garage confirmed.
+The operator may book a different repair centre than recommended: ApprovedGarage is the operator's choice,
+RecommendedGarage is the agent's. OverrodeRecommendation=true marks such cases, and OverrideReason records why.
 Status approved means booking not yet requested; booking_requested means awaiting the garage confirmation.
 BookingConfirmed=true and Status=booked mean the garage actually confirmed the booking.
 Do not infer safety, insurance coverage, liability or completed repairs from incident or photo summaries.
@@ -271,7 +273,7 @@ def materialize_graph(cloud: Cloud, state: dict, schemas: dict[str, pa.Schema], 
     }
     parts = [part(item["path"], generated[item["path"]]) if item["path"] in generated else item for item in existing if item["path"] != ".platform"]
     cloud.request("POST", url + "/updateDefinition", {"definition": {"parts": parts}})
-    cloud.request("POST", f"{FABRIC}/workspaces/{workspace}/items/{graph_id}/jobs/instances?jobType=Refresh")
+    cloud.request("POST", f"{FABRIC}/workspaces/{workspace}/items/{graph_id}/jobs/instances?jobType=RefreshGraph")
     return graph_id
 
 

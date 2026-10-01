@@ -228,8 +228,8 @@ class RepairWorkflow:
         if case["status"] != "approved":
             raise IncidentError("Operator approval is required before booking.")
         current_choice = compare_quotes(list(case["quotes"].values()), case["created_at"])
-        if current_choice["garage_id"] != case["approval"]["garage_id"]:
-            raise IncidentError("The approved recommendation is no longer current. Review refreshed quotations.")
+        if current_choice["garage_id"] != case["approval"].get("recommended_garage_id", case["approval"]["garage_id"]):
+            raise IncidentError("The quotations changed after approval. Review refreshed quotations.")
         garage = next(item for item in self.config["garages"] if item["id"] == case["approval"]["garage_id"])
         offer = case["quotes"][garage["id"]]
         body = (
@@ -267,12 +267,20 @@ class RepairWorkflow:
             f"return {item['ready_by']}; {item['downtime_days']} calendar downtime days; total expected GBP {item['total_expected_gbp']}."
             for item in rows
         )
+        approval = case.get("approval") or {}
+        chosen = next((item["garage_name"] for item in rows if item["garage_id"] == approval.get("garage_id")), approval.get("garage_id", ""))
+        decision = (
+            f"Operator decision: {approval['by']} approved {chosen}"
+            + (f", overriding the recommendation. Reason: {approval['reason']}" if approval.get("override") else ", as recommended.")
+            + "\n\n" if booked and approval else ""
+        )
         body = (
             f"{heading}\n\nCase {case_id} | Vehicle {case['vehicle_id']} | {case['vehicle']['Make']} {case['vehicle']['Model']}\n\n"
             f"{case['repair_report']['summary']}\n\n"
             f"{recommendation['rationale']}\n\n"
             f"Quotation comparison at GBP {recommendation['policy']['downtime_cost_per_day']} per downtime day:\n{comparison}\n\n"
-            f"{'The selected garage has confirmed the approved booking.' if booked else 'No booking has been made. Open the case and select Approve & book only after reviewing the evidence and quotes.'}\n\n"
+            f"{decision}"
+            f"{'The selected garage has confirmed the approved booking.' if booked else 'No booking has been made. Open the case, keep the recommended repair centre or choose another, and select Approve & book only after reviewing the evidence and quotes.'}\n\n"
             f"Case dashboard: {config['appUrl']}/#incidents?case={case_id}\n"
             f"Sources: Fabric vehicle telemetry; the customer report; the three original quotation replies; "
             f"Copilot Studio agent {recommendation['agent']['name']} ({recommendation['agent']['id']})."
