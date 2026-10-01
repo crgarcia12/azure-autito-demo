@@ -1,0 +1,7 @@
+.create-merge table VehicleImpacts (EventId:string, VehicleId:string, Timestamp:datetime, PeakAccelerationG:real, DeltaVKmh:real, SpeedBeforeKmh:real, SpeedAfterKmh:real, Latitude:real, Longitude:real, OdometerKm:real, Source:string)
+
+.alter table VehicleImpacts policy streamingingestion enable
+
+.alter-merge table VehicleImpacts policy retention softdelete = 30d recoverability = disabled
+
+.create-or-alter function with (folder="Caldova/Insurance", docstring="Possible impact, not a confirmed accident. Combines impact acceleration >=2.5g and delta-v >=4km/h with the vehicle coming to rest. Deduplicates event retries.") SuspectedImpacts() { VehicleImpacts | where PeakAccelerationG >= 2.5 and DeltaVKmh >= 4.0 and SpeedAfterKmh <= 1.0 | summarize arg_max(Timestamp, *) by EventId | extend DetectionRule="LowSpeedImpact-v1", IncidentConfidence="Requires customer confirmation" }

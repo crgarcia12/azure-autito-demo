@@ -1,0 +1,47 @@
+{
+  "claims_mailbox": "claims@caldova08667473.onmicrosoft.com",
+  "currency": "GBP",
+  "downtime_cost_per_day": 100,
+  "maximum_repair_quote": 2500,
+  "quote_validity_days": 3,
+  "customer_link_hours": 24,
+  "maximum_photos": 6,
+  "maximum_photo_bytes": 10485760,
+  "impact_threshold_g": 2.5,
+  "impact_minimum_delta_v_kmh": 4,
+  "garages": [
+    {
+      "id": "alder",
+      "name": "Alder Bodyworks",
+      "mailbox": "alder.repairs@caldova08667473.onmicrosoft.com",
+      "agent_schema": "cdv_alderrepairs",
+      "lead_business_days": 5,
+      "repair_business_days": 2,
+      "bumper_cosmetic_quote": 450,
+      "approved": true,
+      "warranty_months": 12
+    },
+    {
+      "id": "metro",
+      "name": "Metro Rapid Repair",
+      "mailbox": "metro.repairs@caldova08667473.onmicrosoft.com",
+      "agent_schema": "cdv_metrorepairs",
+      "lead_business_days": 1,
+      "repair_business_days": 1,
+      "bumper_cosmetic_quote": 600,
+      "approved": true,
+      "warranty_months": 18
+    },
+    {
+      "id": "riverside",
+      "name": "Riverside Auto Care",
+      "mailbox": "riverside.repairs@caldova08667473.onmicrosoft.com",
+      "agent_schema": "cdv_riversiderepairs",
+      "lead_business_days": 3,
+      "repair_business_days": 2,
+      "bumper_cosmetic_quote": 550,
+      "approved": true,
+      "warranty_months": 12
+    }
+  ]
+}

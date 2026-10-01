@@ -1,0 +1,24 @@
+{
+  "name": "Caldova IQ Content Studio",
+  "authors": [
+    {
+      "upn": "AadiK@caldova08667473.onmicrosoft.com",
+      "role": "Fleet operations"
+    },
+    {
+      "upn": "AishaW@caldova08667473.onmicrosoft.com",
+      "role": "Branch and customer operations"
+    },
+    {
+      "upn": "Alans@caldova08667473.onmicrosoft.com",
+      "role": "Fleet analytics and maintenance coordination"
+    }
+  ],
+  "observer": "admin@caldova08667473.onmicrosoft.com",
+  "conversations": 8,
+  "messages_per_conversation": 8,
+  "meetings": 5,
+  "documents": 6,
+  "meeting_timezone": "Europe/London",
+  "drive_folder": "Caldova Drive IQ"
+}

@@ -1,0 +1,25 @@
+displayName: Alder Bodyworks
+schemaName: cdv_alderrepairs
+accessControlPolicy: GroupMembership
+authenticationMode: None
+authenticationTrigger: AsNeeded
+configuration:
+  settings:
+    GenerativeActionsEnabled: true
+
+  isAgentConnectable: true
+  gPTSettings:
+    defaultSchemaName: cdv_alderrepairs.gpt.default
+
+  aISettings:
+    useModelKnowledge: true
+    isFileAnalysisEnabled: true
+    isSemanticSearchEnabled: true
+    optInUseLatestModels: false
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+publishedOn: 2026-09-30T21:28:57.0000000Z
+template: default-2.1.0
+language: 1033

@@ -1,0 +1,20 @@
+Caldova incident photography
+
+Source: "Jetta Mk. IV Bumper Damage.jpg", TWikisto, Wikimedia Commons.
+https://commons.wikimedia.org/wiki/File:Jetta_Mk._IV_Bumper_Damage.jpg
+License: Public domain, as declared in the source file's licensing metadata.
+
+bumper-overview.jpg is a recompressed version of the source.
+bumper-detail.jpg is a cropped close-up of the lower bumper.
+
+These files are presentation/evaluation inputs, not photographs of a Caldova customer.
+The full overview deliberately exercises the inspection-required branch.
+No customer or other personal image was used to prepare these assets.
+
+bumper-dent.jpg
+Source: "Dented car bumper", Mark Holmberg / PublicDomainPictures.net.
+https://www.publicdomainpictures.net/en/view-image.php?image=498350&picture=dented-car-bumper
+License: CC0 Public Domain.
+https://creativecommons.org/publicdomain/zero/1.0/
+The image is recompressed as JPEG for the demonstration. It provides a clearer
+visible dent and scuffing; no damage was added or altered to influence the model.
