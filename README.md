@@ -2,7 +2,7 @@
 
 A working UK rental-fleet insurance demonstration: live telemetry and Azure Maps, Microsoft Fabric IQ digital twins, customer photo intake, real Copilot Studio repair agents, real email quotations, and operator-approved booking.
 
-**Start with [storyline.md](storyline.md)** for the chronological presenter walkthrough: the story, what to open and the feature shown at every step. [implementation.md](implementation.md) contains resources, verification results and operating details.
+**Start with [docs/storyline.md](docs/storyline.md)** for the chronological presenter walkthrough: the story, what to open and the feature shown at every step. [docs/implementation.md](docs/implementation.md) contains resources, verification results and operating details. Presenter slides: [docs/intro.html](docs/intro.html) (the story), [docs/agents.html](docs/agents.html) (agents and triggers, orchestrator view) [docs/flow.html](docs/flow.html) (the same agents as a left-to-right flow) and [docs/flow-animated.html](docs/flow-animated.html) (business flow first; Space animates in the product lanes). **Main deck: [docs/demo.html](docs/demo.html)**: business flow → product lanes → each agent highlighted, then its prompt. It is built from `flow-animated.html` plus [docs/prompts.html](docs/prompts.html) (one slide per agent with its exact prompt; regenerate with `python -m tools.prompt_slides`).
 
 ## Demo environment
 
@@ -144,7 +144,7 @@ The installation is limited to the configured operator. Temporary Graph app-cata
 
 The browser check uses the actual local preview and verifies 40 markers inside the map bounds, city filtering, vehicle search, detail selection, view navigation, and mobile layout. It does not replace Fabric responses.
 
-The hosted browser check uses a real user-delegated token, restricted to the configured operator and forwarded only to the application's own origin. The isolated real-service verification and primary-Activator timing test are documented in `implementation.md`; those tests deliberately create real demo-side effects and are not run by the offline unit suite.
+The hosted browser check uses a real user-delegated token, restricted to the configured operator and forwarded only to the application's own origin. The isolated real-service verification and primary-Activator timing test are documented in `docs/implementation.md`; those tests deliberately create real demo-side effects and are not run by the offline unit suite.
 
 ## Work IQ content generation
 

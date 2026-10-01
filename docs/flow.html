@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caldova Drive — The flow: who acts, when, and why</title>
+<style>
+  :root {
+    --bg: #f7f8fb; --card: #ffffff; --line: #dde3ee; --text: #172033; --muted: #5d6a82;
+    --fabric: #0f9d7a; --foundry: #8a4fd1; --studio: #2470d6; --people: #c98a00; --m365: #e05a24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e9edf4; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
+  body { display: grid; place-items: center; overflow: hidden; }
+  .slide {
+    width: 1600px; height: 900px; padding: 44px 64px 30px; position: relative; flex: none;
+    background: radial-gradient(900px 500px at 100% -10%, #e3ecff 0%, transparent 60%),
+                radial-gradient(800px 450px at -10% 110%, #def5ec 0%, transparent 60%), var(--bg);
+    display: grid; grid-template-rows: auto 1fr auto; gap: 18px; transform-origin: center;
+    box-shadow: 0 10px 40px #1720331a;
+  }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+  .eyebrow { color: var(--studio); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 14px; margin-bottom: 8px; }
+  h1 { font-size: 36px; font-weight: 700; letter-spacing: -.02em; line-height: 1.08; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .legend { display: flex; gap: 16px; font-size: 14px; color: var(--muted); align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 430px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; }
+  .legend .ag { border: 2px solid var(--text); width: 14px; height: 14px; border-radius: 4px; background: #fff; }
+
+  .board { position: relative; display: grid; grid-template-columns: 130px 1fr; grid-template-rows: 34px repeat(4, 1fr); }
+  .phase { grid-row: 1; display: grid; grid-template-columns: 1fr 2fr 3fr 2fr 1fr; gap: 0; margin-left: 0; }
+  .phase div { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); padding: 0 0 8px 4px; margin-right: 10px; }
+  .lane-name { grid-column: 1; display: flex; flex-direction: column; justify-content: center; padding-left: 14px; border-left: 5px solid; font-weight: 700; font-size: 17px; }
+  .lane-name small { font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .lane-bg { grid-column: 1 / -1; border-top: 1px dashed var(--line); }
+  .track { grid-column: 2; grid-row: 2 / 6; position: relative; }
+
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .wire { fill: none; stroke: #9aa8c2; stroke-width: 2.5; }
+  .wire.mail { stroke: var(--studio); stroke-dasharray: 6 5; }
+
+  .step {
+    position: absolute; width: 138px; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 11px 12px 10px; box-shadow: 0 2px 10px #17203310;
+    opacity: 0; transform: translateY(8px); animation: in .45s ease forwards;
+  }
+  @keyframes in { to { opacity: 1; transform: none; } }
+  .step.agent { border-width: 2px; }
+  .step .top { display: flex; align-items: center; gap: 8px; } .step h3 { overflow-wrap: anywhere; }
+  .num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13.5px; color: #fff; flex: none; }
+  .step h3 { font-size: 14.5px; font-weight: 700; line-height: 1.15; }
+  .step p { color: var(--muted); font-size: 12px; line-height: 1.32; margin-top: 6px; }
+  .step .who { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-top: 7px; }
+  .trig { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.3; color: var(--muted); }
+  .trig b { color: var(--text); }
+  .x3 { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+  .x3 span { flex: 1; text-align: center; font-size: 11px; font-weight: 600; padding: 3px 0; border-radius: 6px; background: #eaf2fd; color: var(--studio); }
+  .gate { position: absolute; top: -11px; right: 10px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; background: var(--people); color: #fff; padding: 2px 8px; border-radius: 999px; }
+
+  footer { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 26px; font-size: 14.5px; color: var(--muted); line-height: 1.4; border-top: 1px solid var(--line); padding-top: 14px; }
+  footer b { color: var(--text); }
+  .hint { position: fixed; bottom: 10px; right: 14px; color: #9aa6bb; font-size: 12px; }
+  @media print {
+    @page { size: 1600px 900px; margin: 0; }
+    .hint { display: none } html, body { background: var(--bg); overflow: visible }
+    .slide { transform: none !important; box-shadow: none } .step { animation: none; opacity: 1; transform: none }
+  }
+</style>
+</head>
+<body>
+<section class="slide" id="slide">
+  <header>
+    <div>
+      <div class="eyebrow">The flow, left to right</div>
+      <h1>A bump becomes a booked repair <span>— who acts, and when</span></h1>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--people)"></i>People</span>
+      <span><i style="background:var(--fabric)"></i>Microsoft Fabric</span>
+      <span><i style="background:var(--foundry)"></i>Microsoft Foundry</span>
+      <span><i style="background:var(--studio)"></i>Copilot Studio</span>
+      <span><i class="ag"></i>bold border = AI agent</span>
+    </div>
+  </header>
+
+  <div class="board" id="board">
+    <div class="phase" style="grid-column:2">
+      <div>Detect</div><div>Report</div><div>Quote &amp; recommend</div><div>Decide &amp; book</div><div>Ask</div>
+    </div>
+    <div class="lane-name" style="grid-row:2; border-color:var(--people); color:var(--people)">People<small>customer · manager</small></div>
+    <div class="lane-name" style="grid-row:3; border-color:var(--fabric); color:var(--fabric)">Fabric<small>data · rules · IQ</small></div>
+    <div class="lane-name" style="grid-row:4; border-color:var(--foundry); color:var(--foundry)">Foundry<small>vision agent</small></div>
+    <div class="lane-name" style="grid-row:5; border-color:var(--studio); color:var(--studio)">Copilot Studio<small>4 agents · email</small></div>
+    <div class="lane-bg" style="grid-row:3"></div><div class="lane-bg" style="grid-row:4"></div><div class="lane-bg" style="grid-row:5"></div>
+
+    <div class="track" id="track">
+      <svg class="wires" id="wires"></svg>
+
+      <div class="step" id="s1" data-lane="1" data-col="0" style="border-color:color-mix(in srgb,var(--fabric) 45%,transparent)">
+        <div class="top"><span class="num" style="background:var(--fabric)">1</span><h3>Detect the bump</h3></div>
+        <p>Activator rule on live telemetry → pipeline opens the case</p>
+        <div class="trig"><b>Wakes:</b> every minute · ≥2.5 g impact, then stopped</div>
+      </div>
+
+      <div class="step" id="s2" data-lane="0" data-col="1">
+        <div class="top"><span class="num" style="background:var(--people)">2</span><h3>Customer reports</h3></div>
+        <p>Photos + a short explanation from the phone</p>
+        <div class="trig"><b>Wakes:</b> secure link on the phone</div>
+      </div>
+
+      <div class="step agent" id="s3" data-lane="2" data-col="2" style="border-color:var(--foundry)">
+        <div class="top"><span class="num" style="background:var(--foundry)">3</span><h3>Evidence agent</h3></div>
+        <p>Assesses damage, redacts plates and faces, writes the repair brief</p>
+        <div class="trig"><b>Wakes:</b> report submitted</div>
+      </div>
+
+      <div class="step agent" id="s4" data-lane="3" data-col="3" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">4</span><h3>Coordinator asks</h3></div>
+        <p>Writes one quote request, emailed to 3 garages</p>
+        <div class="trig"><b>Wakes:</b> brief is ready</div>
+      </div>
+
+      <div class="step agent" id="s5" data-lane="3" data-col="4" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">5</span><h3>Garage agents quote</h3></div>
+        <div class="x3"><span>Alder</span><span>Metro</span><span>Riverside</span></div>
+        <div class="trig"><b>Wakes:</b> request lands in their own mailbox</div>
+      </div>
+
+      <div class="step agent" id="s6" data-lane="3" data-col="5" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">6</span><h3>Coordinator<br>recommends</h3></div>
+        <p>Repair cost + days off the road → best option</p>
+        <div class="trig"><b>Wakes:</b> all 3 quotes in</div>
+      </div>
+
+      <div class="step" id="s7" data-lane="0" data-col="6" style="border:2px solid var(--people)">
+        <span class="gate">HUMAN GATE</span>
+        <div class="top"><span class="num" style="background:var(--people)">7</span><h3>Manager decides</h3></div>
+        <p>Keeps Copilot's pick or chooses another, with a reason</p>
+        <div class="trig"><b>Wakes:</b> “ready for approval” email</div>
+      </div>
+
+      <div class="step agent" id="s8" data-lane="3" data-col="7" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">8</span><h3>Garage confirms</h3></div>
+        <p>Chosen garage books the slot</p>
+        <div class="trig"><b>Wakes:</b> BOOK email in its mailbox</div>
+      </div>
+
+      <div class="step agent" id="s9" data-lane="1" data-col="8" style="border-color:var(--fabric)">
+        <div class="top"><span class="num" style="background:var(--fabric)">9</span><h3>Caldova Fleet IQ</h3></div>
+        <p>Fabric data agent over the ontology, also in Microsoft 365 Copilot</p>
+        <div class="trig"><b>Wakes:</b> someone asks a question</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p><b>6 agents:</b> 1 Foundry (evidence) · 4 Copilot Studio (coordinator + Alder, Metro, Riverside) · 1 Fabric data agent. The Activator and pipeline are rules, not agents.</p>
+    <p><b>Each step wakes the next.</b> The Caldova app checks every case every 20 s and hands it to whoever acts next. Agents never call each other.</p>
+    <p><b>Nothing is booked without step 7.</b> Garages talk by real email (dashed lines), so the thread is the audit trail.</p>
+  </footer>
+</section>
+<div class="hint">F = full screen · P = print / PDF</div>
+<script>
+  const slide = document.getElementById("slide");
+  const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
+  addEventListener("resize", fit); fit();
+  addEventListener("keydown", e => {
+    if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (e.key === "p" || e.key === "P") print();
+  });
+
+  const track = document.getElementById("track"), steps = [...track.querySelectorAll(".step")];
+  const place = () => {
+    const W = track.clientWidth, H = track.clientHeight, laneH = H / 4, cols = 8;
+    steps.forEach((el, i) => {
+      el.style.left = `${(+el.dataset.col / cols) * (W - 142) + 2}px`;
+      el.style.top = `${+el.dataset.lane * laneH + (laneH - el.offsetHeight) / 2}px`;
+      el.style.animationDelay = `${.08 * i}s`;
+    });
+    const svg = document.getElementById("wires");
+    svg.innerHTML = '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7d8cab"/></marker><marker id="m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2470d6"/></marker></defs>';
+    const box = el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight });
+    const link = (a, b, mail) => {
+      const A = box(a), B = box(b);
+      let d;
+      if (Math.abs(A.y + A.h / 2 - (B.y + B.h / 2)) < 4) d = `M${A.x + A.w},${A.y + A.h / 2} L${B.x - 2},${B.y + B.h / 2}`;
+      else {
+        const down = B.y > A.y, x = A.x + A.w * .5, y1 = down ? A.y + A.h : A.y, y2 = B.y + Math.min(B.h / 2, 40), r = 14;
+        d = `M${x},${y1} L${x},${y2 + (down ? -r : r)} Q${x},${y2} ${x + r},${y2} L${B.x - 2},${y2}`;
+      }
+      svg.insertAdjacentHTML("beforeend", `<path class="wire${mail ? " mail" : ""}" d="${d}" marker-end="url(#${mail ? "m" : "a"})"/>`);
+    };
+    const s = id => document.getElementById(id);
+    link(s("s1"), s("s2")); link(s("s2"), s("s3")); link(s("s3"), s("s4"));
+    link(s("s4"), s("s5"), true); link(s("s5"), s("s6"), true); link(s("s6"), s("s7"));
+    link(s("s7"), s("s8"), true); link(s("s8"), s("s9"));
+  };
+  addEventListener("load", place); addEventListener("resize", place); place();
+</script>
+</body>
+</html>

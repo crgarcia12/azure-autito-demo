@@ -222,15 +222,15 @@ Show the native agent's rationale. Move the **downtime cost** slider to zero, th
 
 **Say:** “The manager is not reconstructing the case from five different screens. Everything needed to judge the recommendation is here.”
 
-## 11. The manager accepts the recommendation
+## 11. The manager decides: accept or override
 
-**Story:** After reviewing the case, the manager approves Metro. This is the point at which Caldova authorises the booking request.
+**Story:** After reviewing the case, the manager makes the call. Copilot pre-selects Metro, but every quote card is selectable. The manager can keep the recommendation or pick another centre. In that case, Caldova records a reason with the approval.
 
-**Open and do:** Click **Approve & book**. Show the status change and the new `[BOOK]` email to Metro.
+**Open and do:** In **Repair options**, point out that Metro is pre-selected and marked **Copilot recommends**. Optionally, click **Alder** to show the override: the button changes to **Approve & book Alder →**, and a reason box appears (e.g. “Customer needs the cheapest repair; downtime covered by a spare car”). Click back on **Metro** and click **Approve & book Metro →**. Show the status change and the new `[BOOK]` email to the chosen centre. If you override, the case shows **Operator choice**, the reason, and the operator booking email states the override.
 
-**Feature:** Explicit human approval; version and quote-validity checks; controlled execution.
+**Feature:** Explicit human approval; operator override with an audited reason; version and quote-validity checks; controlled execution. Fabric `Incidents` records `RecommendedGarage`, `ApprovedGarage`, `OverrodeRecommendation` and `OverrideReason`, so Fabric IQ can answer “Which cases did operators override, and why?”
 
-**Say:** “The agent recommends. The manager authorises. A recommendation on a screen is not permission to commit the business.”
+**Say:** “The agent recommends. The manager decides — and can disagree. A recommendation on a screen is not permission to commit the business.”
 
 ## 12. The garage confirms the booking
 

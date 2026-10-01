@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caldova Drive — The business flow, then who does it</title>
+<style>
+  :root {
+    --bg: #f7f8fb; --card: #ffffff; --line: #dde3ee; --text: #172033; --muted: #5d6a82;
+    --fabric: #0f9d7a; --foundry: #8a4fd1; --studio: #2470d6; --people: #c98a00; --m365: #e05a24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e9edf4; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
+  body { display: grid; place-items: center; overflow: hidden; }
+  .slide {
+    width: 1600px; height: 900px; padding: 44px 64px 30px; position: relative; flex: none;
+    background: radial-gradient(900px 500px at 100% -10%, #e3ecff 0%, transparent 60%),
+                radial-gradient(800px 450px at -10% 110%, #def5ec 0%, transparent 60%), var(--bg);
+    display: grid; grid-template-rows: auto 1fr auto; gap: 18px; transform-origin: center;
+    box-shadow: 0 10px 40px #1720331a;
+  }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+  .eyebrow { color: var(--studio); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 14px; margin-bottom: 8px; }
+  h1 { font-size: 36px; font-weight: 700; letter-spacing: -.02em; line-height: 1.08; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .legend { display: flex; gap: 16px; font-size: 14px; color: var(--muted); align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 430px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; }
+  .legend .ag { border: 2px solid var(--text); width: 14px; height: 14px; border-radius: 4px; background: #fff; }
+
+  .board { position: relative; display: grid; grid-template-columns: 130px 1fr; grid-template-rows: 34px repeat(4, 1fr); }
+  .phase { grid-row: 1; display: grid; grid-template-columns: 1fr 2fr 3fr 2fr 1fr; gap: 0; margin-left: 0; }
+  .phase div { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); padding: 0 0 8px 4px; margin-right: 10px; }
+  .lane-name { grid-column: 1; display: flex; flex-direction: column; justify-content: center; padding-left: 14px; border-left: 5px solid; font-weight: 700; font-size: 17px; }
+  .lane-name small { font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .lane-bg { grid-column: 1 / -1; border-top: 1px dashed var(--line); }
+  .track { grid-column: 2; grid-row: 2 / 6; position: relative; }
+
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .wire { fill: none; stroke: #9aa8c2; stroke-width: 2.5; }
+  .wire.mail { stroke: var(--studio); stroke-dasharray: 6 5; }
+
+  .step {
+    position: absolute; width: 138px; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 11px 12px 10px; box-shadow: 0 2px 10px #17203310;
+    opacity: 0; transform: translateY(8px); animation: in .45s ease forwards;
+  }
+  @keyframes in { to { opacity: 1; transform: none; } }
+  .step.agent { border-width: 2px; }
+  .step .top { display: flex; align-items: center; gap: 8px; } .step h3 { overflow-wrap: anywhere; }
+  .num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13.5px; color: #fff; flex: none; }
+  .step h3 { font-size: 14.5px; font-weight: 700; line-height: 1.15; }
+  .step p { color: var(--muted); font-size: 12px; line-height: 1.32; margin-top: 6px; }
+  .step .who { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-top: 7px; }
+  .trig { margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.3; color: var(--muted); }
+  .trig b { color: var(--text); }
+  .x3 { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+  .x3 span { flex: 1; text-align: center; font-size: 11px; font-weight: 600; padding: 3px 0; border-radius: 6px; background: #eaf2fd; color: var(--studio); }
+  .gate { position: absolute; top: -11px; right: 10px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; background: var(--people); color: #fff; padding: 2px 8px; border-radius: 999px; }
+
+  footer { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 26px; font-size: 14.5px; color: var(--muted); line-height: 1.4; border-top: 1px solid var(--line); padding-top: 14px; }
+  footer b { color: var(--text); }
+  .hint { position: fixed; bottom: 10px; right: 14px; color: #9aa6bb; font-size: 12px; }
+  @media print {
+    @page { size: 1600px 900px; margin: 0; }
+    .hint { display: none } html, body { background: var(--bg); overflow: visible }
+    .slide { transform: none !important; box-shadow: none } .step { animation: none; opacity: 1; transform: none }
+  }
+
+  .step { transition: left .9s cubic-bezier(.65,0,.25,1), top .9s cubic-bezier(.65,0,.25,1), border-color .6s, box-shadow .6s; }
+  .num { transition: background .6s; }
+  .lane-name, .lane-bg, .legend, footer { transition: opacity .7s ease .5s, transform .7s ease .5s; }
+  .step h3, .step p.d { display: grid; grid-template-columns: 1fr; } .step h3 { flex: 1; min-width: 0; overflow-wrap: normal; }
+  .step h3 > span, .step p.d > span { grid-area: 1 / 1; transition: opacity .5s ease; }
+  .step p.d { color: var(--muted); font-size: 12px; line-height: 1.32; margin-top: 6px; }
+  .trig { max-height: 80px; overflow: hidden; transition: max-height .6s ease .3s, opacity .5s ease .5s, padding .6s ease .3s, margin .6s ease .3s, border-color .6s; }
+  .t { opacity: 1 } .b { opacity: 0 }
+  .biz .t { opacity: 0 } .biz .b { opacity: 1 }
+  .biz .trig { max-height: 0; opacity: 0; padding-top: 0; margin-top: 0; border-top-color: transparent; transition-delay: 0s; }
+  .biz .lane-name { opacity: 0; transform: translateX(-18px); transition-delay: 0s; }
+  .biz .lane-bg, .biz .legend, .biz footer.tech { opacity: 0; transition-delay: 0s; }
+  footer.biz-foot { grid-row: 3; grid-column: 1; display: flex; justify-content: center; gap: 46px; font-size: 19px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; transition: opacity .5s ease; }
+  footer.biz-foot b { color: var(--text); }
+  footer.tech { grid-row: 3; grid-column: 1; }
+  .slide:not(.biz) footer.biz-foot { opacity: 0; pointer-events: none; }
+  .biz .step:not(#s7) { border-color: #cfd7e6 !important; }
+  .biz .step:not(#s7) .num { background: #3b4762 !important; }
+  .biz .x3 span { background: #eef1f6; color: #3b4762; }
+  .x3 span { transition: background .6s, color .6s; }
+  .notrans, .notrans * { transition: none !important; }
+</style>
+</head>
+<body>
+<section class="slide biz notrans" id="slide">
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow">The business flow</div>
+      <h1>A bump becomes a booked repair <span id="sub">— nine steps, one decision</span></h1>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--people)"></i>People</span>
+      <span><i style="background:var(--fabric)"></i>Microsoft Fabric</span>
+      <span><i style="background:var(--foundry)"></i>Microsoft Foundry</span>
+      <span><i style="background:var(--studio)"></i>Copilot Studio</span>
+      <span><i class="ag"></i>bold border = AI agent</span>
+    </div>
+  </header>
+
+  <div class="board" id="board">
+    <div class="phase" style="grid-column:2">
+      <div>Detect</div><div>Report</div><div>Quote &amp; recommend</div><div>Decide &amp; book</div><div>Ask</div>
+    </div>
+    <div class="lane-name" style="grid-row:2; border-color:var(--people); color:var(--people)">People<small>customer · manager</small></div>
+    <div class="lane-name" style="grid-row:3; border-color:var(--fabric); color:var(--fabric)">Fabric<small>data · rules · IQ</small></div>
+    <div class="lane-name" style="grid-row:4; border-color:var(--foundry); color:var(--foundry)">Foundry<small>vision agent</small></div>
+    <div class="lane-name" style="grid-row:5; border-color:var(--studio); color:var(--studio)">Copilot Studio<small>4 agents · email</small></div>
+    <div class="lane-bg" style="grid-row:3"></div><div class="lane-bg" style="grid-row:4"></div><div class="lane-bg" style="grid-row:5"></div>
+
+    <div class="track" id="track">
+      <svg class="wires" id="wires"></svg>
+
+      <div class="step" id="s1" data-lane="1" data-col="0" style="border-color:color-mix(in srgb,var(--fabric) 45%,transparent)">
+        <div class="top"><span class="num" style="background:var(--fabric)">1</span><h3><span class="t">Detect the bump</span><span class="b">Bump detected</span></h3></div>
+        <p class="d"><span class="t">Activator rule on live telemetry → pipeline opens the case</span><span class="b">The car registers an impact; a case opens by itself</span></p>
+        <div class="trig"><b>Wakes:</b> every minute · ≥2.5 g impact, then stopped</div>
+      </div>
+
+      <div class="step" id="s2" data-lane="0" data-col="1">
+        <div class="top"><span class="num" style="background:var(--people)">2</span><h3><span class="t">Customer reports</span><span class="b">Customer reports</span></h3></div>
+        <p class="d"><span class="t">Photos + a short explanation from the phone</span><span class="b">Photos + a short explanation from the phone</span></p>
+        <div class="trig"><b>Wakes:</b> secure link on the phone</div>
+      </div>
+
+      <div class="step agent" id="s3" data-lane="2" data-col="2" style="border-color:var(--foundry)">
+        <div class="top"><span class="num" style="background:var(--foundry)">3</span><h3><span class="t">Evidence agent</span><span class="b">Damage assessed</span></h3></div>
+        <p class="d"><span class="t">Assesses damage, redacts plates and faces, writes the repair brief</span><span class="b">Photos checked, privacy protected, repair brief written</span></p>
+        <div class="trig"><b>Wakes:</b> report submitted</div>
+      </div>
+
+      <div class="step agent" id="s4" data-lane="3" data-col="3" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">4</span><h3><span class="t">Coordinator asks</span><span class="b">Quotes requested</span></h3></div>
+        <p class="d"><span class="t">Writes one quote request, emailed to 3 garages</span><span class="b">Three repair centres asked to quote</span></p>
+        <div class="trig"><b>Wakes:</b> brief is ready</div>
+      </div>
+
+      <div class="step agent" id="s5" data-lane="3" data-col="4" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">5</span><h3><span class="t">Garage agents quote</span><span class="b">Garages quote</span></h3></div>
+        <div class="x3"><span>Alder</span><span>Metro</span><span>Riverside</span></div>
+        <div class="trig"><b>Wakes:</b> request lands in their own mailbox</div>
+      </div>
+
+      <div class="step agent" id="s6" data-lane="3" data-col="5" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">6</span><h3><span class="t">Coordinator<br>recommends</span><span class="b">Best option<br>proposed</span></h3></div>
+        <p class="d"><span class="t">Repair cost + days off the road → best option</span><span class="b">Price weighed against days off the road</span></p>
+        <div class="trig"><b>Wakes:</b> all 3 quotes in</div>
+      </div>
+
+      <div class="step" id="s7" data-lane="0" data-col="6" style="border:2px solid var(--people)">
+        <span class="gate">HUMAN GATE</span>
+        <div class="top"><span class="num" style="background:var(--people)">7</span><h3><span class="t">Manager decides</span><span class="b">Manager decides</span></h3></div>
+        <p class="d"><span class="t">Keeps Copilot's pick or chooses another, with a reason</span><span class="b">Keeps Copilot's pick or chooses another, with a reason</span></p>
+        <div class="trig"><b>Wakes:</b> “ready for approval” email</div>
+      </div>
+
+      <div class="step agent" id="s8" data-lane="3" data-col="7" style="border-color:var(--studio)">
+        <div class="top"><span class="num" style="background:var(--studio)">8</span><h3><span class="t">Garage confirms</span><span class="b">Repair booked</span></h3></div>
+        <p class="d"><span class="t">Chosen garage books the slot</span><span class="b">Slot confirmed, customer sees the next step</span></p>
+        <div class="trig"><b>Wakes:</b> BOOK email in its mailbox</div>
+      </div>
+
+      <div class="step agent" id="s9" data-lane="1" data-col="8" style="border-color:var(--fabric)">
+        <div class="top"><span class="num" style="background:var(--fabric)">9</span><h3><span class="t">Caldova Fleet IQ</span><span class="b">Ask the fleet</span></h3></div>
+        <p class="d"><span class="t">Fabric data agent over the ontology, also in Microsoft 365 Copilot</span><span class="b">Anyone asks about any car, case or quote in plain language</span></p>
+        <div class="trig"><b>Wakes:</b> someone asks a question</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="biz-foot"><span><b>1</b> customer report</span><span><b>3</b> competing quotes</span><span><b>1</b> human decision</span><span><b>0</b> phone calls</span></footer>
+  <footer class="tech">
+    <p><b>6 agents:</b> 1 Foundry (evidence) · 4 Copilot Studio (coordinator + Alder, Metro, Riverside) · 1 Fabric data agent. The Activator and pipeline are rules, not agents.</p>
+    <p><b>Each step wakes the next.</b> The Caldova app checks every case every 20 s and hands it to whoever acts next. Agents never call each other.</p>
+    <p><b>Nothing is booked without step 7.</b> Garages talk by real email (dashed lines), so the thread is the audit trail.</p>
+  </footer>
+</section>
+<div class="hint">Space / click = show who does it · ← back · F = full screen · P = print</div>
+<script>
+  const slide = document.getElementById("slide");
+  const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
+  addEventListener("resize", fit); fit();
+  addEventListener("keydown", e => {
+    if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (e.key === "p" || e.key === "P") print();
+  });
+
+  const track = document.getElementById("track"), steps = [...track.querySelectorAll(".step")];
+  const s = id => document.getElementById(id);
+  const heights = { biz: [], tech: [] };
+  let mode = "biz";
+  const measure = () => {
+    slide.classList.add("notrans");
+    for (const m of ["tech", "biz"]) { slide.classList.toggle("biz", m === "biz"); heights[m] = steps.map(el => el.offsetHeight); }
+    slide.classList.toggle("biz", mode === "biz");
+    void slide.offsetHeight;
+  };
+  const layout = () => {
+    const W = track.clientWidth, H = track.clientHeight, laneH = H / 4, cols = 8;
+    steps.forEach((el, i) => {
+      const h = heights[mode][i];
+      el.style.left = `${(+el.dataset.col / cols) * (W - 142) + 2}px`;
+      el.style.top = mode === "biz" ? `${(H - h) / 2}px` : `${+el.dataset.lane * laneH + (laneH - h) / 2}px`;
+    });
+  };
+  const svg = document.getElementById("wires");
+  const box = el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight });
+  const draw = () => {
+    svg.innerHTML = '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7d8cab"/></marker><marker id="m" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2470d6"/></marker></defs>';
+    const link = (a, b, mail) => {
+      const A = box(a), B = box(b), ay = A.y + A.h / 2, by = B.y + B.h / 2;
+      let d;
+      if (Math.abs(ay - by) < 12) d = `M${A.x + A.w},${ay} C${(A.x + A.w + B.x) / 2},${ay} ${(A.x + A.w + B.x) / 2},${by} ${B.x - 2},${by}`;
+      else {
+        const down = B.y > A.y, x = A.x + A.w * .5, y1 = down ? A.y + A.h : A.y, y2 = B.y + Math.min(B.h / 2, 40), r = Math.min(14, Math.abs(y2 - y1) / 2);
+        d = `M${x},${y1} L${x},${y2 + (down ? -r : r)} Q${x},${y2} ${x + r},${y2} L${B.x - 2},${y2}`;
+      }
+      const m = mail && mode === "tech";
+      svg.insertAdjacentHTML("beforeend", `<path class="wire${m ? " mail" : ""}" d="${d}" marker-end="url(#${m ? "m" : "a"})"/>`);
+    };
+    link(s("s1"), s("s2")); link(s("s2"), s("s3")); link(s("s3"), s("s4"));
+    link(s("s4"), s("s5"), true); link(s("s5"), s("s6"), true); link(s("s6"), s("s7"));
+    link(s("s7"), s("s8"), true); link(s("s8"), s("s9"));
+  };
+  let until = 0;
+  const loop = () => { draw(); if (performance.now() < until) requestAnimationFrame(loop); };
+  const animateWires = ms => { const go = performance.now() >= until; until = performance.now() + ms; if (go) requestAnimationFrame(loop); };
+  const setMode = m => {
+    if (m === mode) return;
+    mode = m;
+    slide.classList.toggle("biz", mode === "biz");
+    document.getElementById("eyebrow").textContent = mode === "biz" ? "The business flow" : "Behind the flow";
+    document.getElementById("sub").textContent = mode === "biz" ? "— nine steps, one decision" : "— who acts, and when";
+    steps.forEach((el, i) => el.style.transitionDelay = `${(mode === "tech" ? i : steps.length - 1 - i) * 70}ms, ${(mode === "tech" ? i : steps.length - 1 - i) * 70}ms, 0s, 0s`);
+    layout(); animateWires(2000);
+  };
+  const init = () => {
+    measure(); layout(); draw();
+    steps.forEach((el, i) => el.style.animationDelay = `${.08 * i}s`);
+    requestAnimationFrame(() => slide.classList.remove("notrans"));
+    animateWires(1200);
+  };
+  addEventListener("keydown", e => {
+    if ([" ", "ArrowRight", "Enter", "PageDown"].includes(e.key)) { e.preventDefault(); setMode("tech"); }
+    if (["ArrowLeft", "Backspace", "PageUp"].includes(e.key)) { e.preventDefault(); setMode("biz"); }
+  });
+  slide.addEventListener("click", () => setMode(mode === "biz" ? "tech" : "biz"));
+  addEventListener("resize", () => { layout(); draw(); });
+  addEventListener("load", init); init();
+  if (location.hash === "#lanes") { steps.forEach(el => { el.style.animation = "none"; el.style.opacity = 1; el.style.transform = "none"; }); setMode("tech"); }
+</script>
+</body>
+</html>

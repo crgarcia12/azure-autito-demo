@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caldova Drive — Who does what: the agents and their triggers</title>
+<style>
+  :root {
+    --bg: #0b1220; --panel: #121b2e; --line: #24324d; --text: #e8edf6; --muted: #93a1bb;
+    --fabric: #1fb38f; --foundry: #a46ee0; --studio: #3b8fe8; --app: #c9ced8; --m365: #f0703f; --human: #f2c14e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #05080f; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
+  body { display: grid; place-items: center; overflow: hidden; }
+  .slide {
+    width: 1600px; height: 900px; padding: 44px 72px 36px; position: relative; flex: none;
+    background: radial-gradient(1200px 600px at 85% -10%, #16305a 0%, transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, #0f3b33 0%, transparent 60%), var(--bg);
+    display: grid; grid-template-rows: auto 1fr auto; gap: 22px; transform-origin: center;
+  }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
+  .eyebrow { color: var(--studio); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: 15px; margin-bottom: 10px; }
+  h1 { font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .count { display: flex; gap: 12px; }
+  .count div { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; text-align: center; min-width: 118px; }
+  .count b { display: block; font-size: 34px; line-height: 1.1; }
+  .count small { color: var(--muted); font-size: 13px; }
+
+  .stage { position: relative; }
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .wire { fill: none; stroke: #4a5f8c; stroke-width: 2.5; }
+  .wire.dash { stroke-dasharray: 7 6; }
+  .wire.anim { stroke-dasharray: 8 8; animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -16; } }
+
+  .card {
+    position: absolute; border-radius: 16px; padding: 14px 16px; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #16213a 0%, var(--panel) 100%);
+    opacity: 0; transform: translateY(10px); animation: in .5s ease forwards;
+  }
+  @keyframes in { to { opacity: 1; transform: none; } }
+  .card h3 { font-size: 19px; font-weight: 650; display: flex; align-items: center; gap: 9px; }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.35; margin-top: 5px; }
+  .card code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; color: #c9d4ea; }
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid; }
+  .agent { border-width: 2px; }
+  .badge { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: 15px; color: #06101f; flex: none; }
+  .trig { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.35; }
+  .trig b { color: var(--text); }
+  .trig span { color: var(--muted); }
+  .sub { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 9px; }
+  .sub div { border: 1.5px solid color-mix(in srgb, var(--studio) 55%, transparent); border-radius: 10px; padding: 7px 6px; text-align: center; font-size: 13.5px; font-weight: 600; background: color-mix(in srgb, var(--studio) 10%, transparent); }
+  .sub small { display: block; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+
+  .lbl { position: absolute; font-size: 13px; line-height: 1.3; color: var(--muted); background: #0b1220e6; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); }
+  .lbl b { color: var(--text); }
+  .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--text); color: #06101f; font-size: 11.5px; font-weight: 800; margin-right: 4px; vertical-align: 1px; }
+
+  footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; font-size: 15px; color: var(--muted); line-height: 1.4; }
+  footer b { color: var(--text); }
+  .hint { position: fixed; bottom: 10px; right: 14px; color: #3a4762; font-size: 12px; }
+  @media print {
+    @page { size: 1600px 900px; margin: 0; }
+    .hint { display: none } html, body { background: var(--bg); overflow: visible }
+    .slide { transform: none !important } .card { animation: none; opacity: 1; transform: none }
+  }
+</style>
+</head>
+<body>
+<section class="slide" id="slide">
+  <header>
+    <div>
+      <div class="eyebrow">Behind the scenes</div>
+      <h1>Six agents, one orchestrator <span>— two human gates</span></h1>
+    </div>
+    <div class="count">
+      <div style="border-color:var(--foundry)"><b style="color:var(--foundry)">1</b><small>Foundry agent</small></div>
+      <div style="border-color:var(--studio)"><b style="color:var(--studio)">4</b><small>Copilot Studio agents</small></div>
+      <div style="border-color:var(--fabric)"><b style="color:var(--fabric)">1</b><small>Fabric data agent</small></div>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <svg class="wires" id="wires"></svg>
+
+    <!-- Fabric detection (automation, not an agent) -->
+    <div class="card" id="fabric" style="left:0; top:10px; width:330px; animation-delay:.05s; border-color:color-mix(in srgb,var(--fabric) 50%,transparent)">
+      <h3><span class="tag" style="color:var(--fabric)">Rule, not an agent</span></h3>
+      <h3 style="margin-top:8px">Fabric detects the bump</h3>
+      <p>Telemetry → <code>CaldovaFleet</code> KQL → <b style="color:var(--text)">Activator</b> rule on <code>SuspectedImpacts()</code> → <b style="color:var(--text)">Pipeline</b> → app callback</p>
+      <div class="trig"><b>Trigger:</b> <span>rule evaluates every minute (≥2.5 g, Δv ≥4 km/h, car then stopped)</span></div>
+    </div>
+
+    <!-- Foundry -->
+    <div class="card agent" id="foundry" style="left:0; top:372px; width:330px; animation-delay:.35s; border-color:var(--foundry)">
+      <h3><span class="badge" style="background:var(--foundry)">1</span>Evidence agent</h3>
+      <p>Microsoft Foundry · <code>caldova-incident-evidence</code> v2 (GPT-4.1 vision)</p>
+      <p>3 calls: inspect photos → verify privacy redaction → write repair brief + PDF</p>
+      <div class="trig"><b>Trigger:</b> <span>case status becomes <code>evidence_received</code> (customer pressed Submit)</span></div>
+    </div>
+
+    <!-- Humans -->
+    <div class="card" id="humans" style="left:563px; top:0; width:330px; animation-delay:.15s; border-color:color-mix(in srgb,var(--human) 55%,transparent)">
+      <h3><span class="tag" style="color:var(--human)">People</span></h3>
+      <p style="margin-top:8px"><b style="color:var(--text)">Customer</b> · phone link: photos + explanation</p>
+      <p><b style="color:var(--text)">Operations manager</b> · reviews, keeps or changes Copilot's choice, approves</p>
+    </div>
+
+    <!-- Orchestrator -->
+    <div class="card" id="hub" style="left:543px; top:196px; width:370px; animation-delay:.2s; border:2px solid var(--app); box-shadow:0 0 0 6px #c9ced812">
+      <h3><span class="tag" style="color:var(--app)">Orchestrator</span></h3>
+      <h3 style="margin-top:8px; font-size:22px">Caldova app · repair worker</h3>
+      <p>Azure App Service. One case = one state machine. Every <b style="color:var(--text)">20 s</b> it moves each case forward and checks the four shared mailboxes.</p>
+      <p style="font-size:12.5px; margin-top:7px"><code>evidence_received → report_ready → requesting_quotes → recommendation_ready → approved → booked</code></p>
+    </div>
+
+    <!-- Coordinator -->
+    <div class="card agent" id="coord" style="left:1126px; top:0; width:330px; animation-delay:.45s; border-color:var(--studio)">
+      <h3><span class="badge" style="background:var(--studio)">2</span>Claims coordinator</h3>
+      <p>Copilot Studio · <code>cdv_repaircoordinator</code></p>
+      <div class="trig"><b>Trigger A:</b> <span>brief is ready → writes the quote request (RFQ)</span><br><b>Trigger B:</b> <span>3 quotes in → recommends a garage + rationale</span></div>
+    </div>
+
+    <!-- Garages -->
+    <div class="card agent" id="garages" style="left:1126px; top:212px; width:330px; animation-delay:.55s; border-color:var(--studio)">
+      <h3><span class="badge" style="background:var(--studio); width:40px">3–5</span>Garage agents</h3>
+      <p>Copilot Studio · one per repair centre, own rates and calendar</p>
+      <div class="sub"><div>Alder<small>alder.repairs@</small></div><div>Metro<small>metro.repairs@</small></div><div>Riverside<small>riverside.repairs@</small></div></div>
+      <div class="trig"><b>Trigger:</b> <span>an email lands in its shared mailbox: RFQ → replies with a quote; BOOK → confirms the slot</span></div>
+    </div>
+
+    <!-- Data agent -->
+    <div class="card agent" id="data" style="left:563px; top:448px; width:330px; animation-delay:.65s; border-color:var(--fabric)">
+      <h3><span class="badge" style="background:var(--fabric)">6</span>Caldova Fleet IQ</h3>
+      <p>Fabric data agent over the <code>FleetIntelligence</code> Lakehouse + ontology</p>
+      <div class="trig"><b>Trigger:</b> <span>a person asks a question (Fabric or Microsoft 365 Copilot)</span></div>
+    </div>
+
+    <!-- M365 -->
+    <div class="card" id="m365" style="left:1126px; top:470px; width:330px; animation-delay:.75s; border-color:color-mix(in srgb,var(--m365) 55%,transparent)">
+      <h3><span class="tag" style="color:var(--m365)">Front door</span></h3>
+      <h3 style="margin-top:8px">Microsoft 365 Copilot</h3>
+      <p>Fleet IQ answers fleet facts; Work IQ reads the emails behind them</p>
+    </div>
+
+    <!-- Edge labels -->
+    <div class="lbl" style="left:345px; top:150px"><span class="n">1</span><b>Pipeline calls the app</b><br>case opened, no human triage</div>
+    <div class="lbl" style="left:345px; top:304px"><span class="n">3</span><b>3 Foundry calls</b><br>photos in, brief out</div>
+    <div class="lbl" style="left:916px; top:114px"><span class="n">4</span><b>Direct Line</b> · RFQ text<br><span class="n">6</span>recommendation</div>
+    <div class="lbl" style="left:916px; top:300px"><span class="n">5</span><b>Email via Graph</b><br>RFQ out · quote back<br><span class="n">8</span>BOOK out · confirm back</div>
+    <div class="lbl" style="left:734px; top:130px"><span class="n">2</span>report &nbsp;<span class="n">7</span>approve</div>
+    <div class="lbl" style="left:740px; top:401px">Lakehouse refresh, every ~2 min</div>
+    <div class="lbl" style="left:912px; top:560px"><span class="n">9</span><b>“What awaits my approval?”</b></div>
+  </div>
+
+  <footer>
+    <p><b>Agents never call each other.</b> The repair worker reads the case state and invokes the next agent. Every agent's answer is validated before the case moves on.</p>
+    <p><b>Garage agents work by email.</b> They are triggered by real messages in their own shared mailbox and reply from it. The thread is the audit trail.</p>
+    <p><b>Two human gates:</b> the customer's report starts the AI work, and the manager's approval (Copilot's pick or their own, with a reason) is the only thing that books a repair.</p>
+  </footer>
+</section>
+<div class="hint">F = full screen · P = print / PDF</div>
+<script>
+  const slide = document.getElementById("slide");
+  const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
+  addEventListener("resize", fit); fit();
+  addEventListener("keydown", e => {
+    if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    if (e.key === "p" || e.key === "P") print();
+  });
+
+  const box = id => { const el = document.getElementById(id); return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }; };
+  const pt = (b, side, t = .5) => ({
+    l: [b.x, b.y + b.h * t], r: [b.x + b.w, b.y + b.h * t], t: [b.x + b.w * t, b.y], b: [b.x + b.w * t, b.y + b.h]
+  })[side];
+  const wires = [
+    ["fabric", "r", .6, "hub", "l", .3, "anim"],
+    ["hub", "l", .75, "foundry", "r", .4, "anim"],
+    ["humans", "b", .5, "hub", "t", .5, ""],
+    ["hub", "r", .2, "coord", "l", .6, "anim"],
+    ["hub", "r", .6, "garages", "l", .5, "anim"],
+    ["hub", "b", .5, "data", "t", .5, "dash"],
+    ["m365", "l", .5, "data", "r", .55, "dash"],
+  ];
+  const svg = document.getElementById("wires");
+  const draw = () => {
+    svg.innerHTML = '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6f86b8"/></marker></defs>';
+    for (const [f, fs, ft, t, ts, tt, cls] of wires) {
+      const [x1, y1] = pt(box(f), fs, ft), [x2, y2] = pt(box(t), ts, tt);
+      const horiz = fs === "l" || fs === "r", dx = (x2 - x1) / 2, dy = (y2 - y1) / 2;
+      const d = horiz ? `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}` : `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+      svg.insertAdjacentHTML("beforeend", `<path class="wire ${cls}" d="${d}" marker-end="url(#a)" marker-start="url(#a)"/>`);
+    }
+  };
+  addEventListener("load", draw); draw();
+</script>
+</body>
+</html>
