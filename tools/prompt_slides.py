@@ -167,21 +167,40 @@ DECK_CSS = """
   .slide.focus .step.hl { box-shadow: 0 0 0 4px color-mix(in srgb, var(--hc) 30%, transparent), 0 14px 34px color-mix(in srgb, var(--hc) 35%, transparent); }
   .slide.focus .x3 span:not(.hl) { opacity: .3; } .x3 span { transition: opacity .5s, background .5s, color .5s; }
   .slide.focus .x3 span.hl { background: var(--studio); color: #fff; }
-  @media print { .pslide { display: none; } }
+  .xframe { position: fixed; inset: 0; width: 100vw; height: 100vh; border: 0; opacity: 0; pointer-events: none; z-index: 6; background: #e9edf4; transition: opacity .45s ease; }
+  .xframe.on { opacity: 1; }
+  .deck-nav { position: fixed; bottom: 12px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 10px; color: #7d8cab; font-size: 13px; font-weight: 600; }
+  .deck-nav button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #cfd7e6; background: #fff; color: #3b4762; font-size: 18px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px #17203314; }
+  .deck-nav button:hover { border-color: #2470d6; color: #2470d6; }
+  .hint { display: none; }
+  .pslide footer { padding-right: 150px; }
+  @media print { .pslide, .xframe, .deck-nav { display: none; } }
 """
 
 DECK_JS = """
 <script>
   const deckAgents = __AGENTS__;
   const deckPrompts = [...document.querySelectorAll(".pslide")];
-  const deckSeq = [{ mode: "biz" }, { mode: "tech" }];
+  const deckFrames = Object.fromEntries([...document.querySelectorAll(".xframe")].map(f => [f.dataset.id, f]));
+  const deckSeq = [{ frame: "intro" }, { mode: "biz" }, { mode: "tech" }];
   deckAgents.forEach((a, k) => deckSeq.push({ mode: "tech", agent: k }, { mode: "tech", agent: k, prompt: true }));
-  deckSeq.push({ mode: "tech" });
-  let deckAt = 0;
+  deckSeq.push({ mode: "tech" }, { frame: "agents" });
+  let deckAt = -1, flowSeen = false;
   const deckFit = () => document.documentElement.style.setProperty("--s", Math.min(innerWidth / 1600, innerHeight / 900));
+  const replayFlow = () => {
+    steps.forEach((el, i) => { el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; el.style.animationDelay = `${.08 * i}s`; });
+    animateWires(1500);
+  };
   const deckShow = n => {
+    const prev = deckSeq[deckAt];
     deckAt = Math.min(Math.max(n, 0), deckSeq.length - 1);
     const st = deckSeq[deckAt], a = deckAgents[st.agent];
+    Object.entries(deckFrames).forEach(([id, f]) => f.classList.toggle("on", st.frame === id));
+    deckPrompts.forEach((p, k) => p.classList.toggle("on", !!st.prompt && k === st.agent));
+    document.getElementById("deckPos").textContent = `${deckAt + 1} / ${deckSeq.length}`;
+    history.replaceState(null, "", `#${deckAt + 1}`);
+    if (st.frame) return;
+    if (!flowSeen || (prev && prev.frame === "intro")) { flowSeen = true; replayFlow(); }
     steps.forEach(el => { el.classList.remove("hl"); el.style.removeProperty("--hc"); });
     track.querySelectorAll(".x3 span").forEach(el => el.classList.remove("hl"));
     if (st.mode !== mode) setMode(st.mode); else steps.forEach(el => el.style.transitionDelay = "0s");
@@ -196,22 +215,29 @@ DECK_JS = """
       document.getElementById("eyebrow").textContent = "Behind the flow";
       document.getElementById("sub").textContent = "— who acts, and when";
     }
-    deckPrompts.forEach((p, k) => p.classList.toggle("on", !!st.prompt && k === st.agent));
-    history.replaceState(null, "", `#${deckAt + 1}`);
   };
   addEventListener("keydown", e => {
-    const fwd = [" ", "ArrowRight", "Enter", "PageDown"].includes(e.key), back = ["ArrowLeft", "Backspace", "PageUp"].includes(e.key);
+    const fwd = [" ", "ArrowRight", "ArrowDown", "Enter", "PageDown"].includes(e.key), back = ["ArrowLeft", "ArrowUp", "Backspace", "PageUp"].includes(e.key);
+    if (e.key === "Home" || e.key === "End") { e.preventDefault(); e.stopImmediatePropagation(); deckShow(e.key === "Home" ? 0 : deckSeq.length - 1); return; }
     if (!fwd && !back) return;
     e.preventDefault(); e.stopImmediatePropagation();
     deckShow(deckAt + (fwd ? 1 : -1));
   }, true);
-  addEventListener("click", e => { e.stopPropagation(); deckShow(deckAt + 1); }, true);
+  addEventListener("click", e => {
+    e.stopPropagation();
+    const nav = e.target.closest("[data-nav]");
+    deckShow(deckAt + (nav ? +nav.dataset.nav : 1));
+  }, true);
   addEventListener("resize", deckFit); deckFit();
-  const deckStart = parseInt(location.hash.slice(1)) - 1;
-  if (deckStart > 0) { steps.forEach(el => { el.style.animation = "none"; el.style.opacity = 1; el.style.transform = "none"; }); deckShow(deckStart); }
+  deckShow((parseInt(location.hash.slice(1)) || 1) - 1);
 </script>
 """
 
+FRAMES = """
+<iframe class="xframe" data-id="intro" src="intro.html" tabindex="-1" title="The story"></iframe>
+<iframe class="xframe" data-id="agents" src="agents.html" tabindex="-1" title="Agents and triggers"></iframe>
+<div class="deck-nav"><button data-nav="-1" aria-label="Previous">‹</button><span id="deckPos"></span><button data-nav="1" aria-label="Next">›</button></div>
+"""
 
 def prompts_page(slides: str) -> str:
     return TEMPLATE.replace("{{CSS}}", PROMPT_CSS).replace("{{SLIDES}}", slides)
@@ -223,9 +249,9 @@ def deck_page(slides: str) -> str:
     for needle in ("</style>", hint, "</body>", "<title>"):
         if needle not in flow:
             raise ValueError(f"flow-animated.html changed; missing {needle!r}")
-    flow = re.sub(r"<title>.*?</title>", "<title>Caldova Drive — The flow, the agents and their prompts</title>", flow)
+    flow = re.sub(r"<title>.*?</title>", "<title>Caldova Drive — From a bump to a booked repair</title>", flow)
     flow = flow.replace("</style>", PROMPT_CSS + DECK_CSS + "</style>", 1)
-    flow = flow.replace(hint, slides + '\n<div class="hint">Space / → = next · ← back · F = full screen</div>', 1)
+    flow = flow.replace(hint, slides + FRAMES, 1)
     js = DECK_JS.replace("__AGENTS__", json.dumps(AGENTS))
     return flow.replace("</body>", js + "</body>", 1)
 
@@ -242,7 +268,7 @@ TEMPLATE = """<!DOCTYPE html>
   html, body { height: 100%; background: #e9edf4; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
   body { display: grid; place-items: center; overflow: hidden; }
 {{CSS}}
-  .pslide { position: absolute; display: none; }
+  .pslide { position: absolute; left: 50%; top: 50%; margin: -450px 0 0 -800px; display: none; }
   .pslide.on { display: grid; }
   .hint { position: fixed; bottom: 10px; right: 14px; color: #9aa6bb; font-size: 12px; }
   @media print {
@@ -276,7 +302,7 @@ TEMPLATE = """<!DOCTYPE html>
 
 if __name__ == "__main__":
     slides = build()
-    for name, page in (("prompts.html", prompts_page(slides)), ("demo.html", deck_page(slides))):
+    for name, page in (("prompts.html", prompts_page(slides)), ("index.html", deck_page(slides))):
         target = ROOT / "docs" / name
         target.write_text(page, encoding="utf-8")
         print(target)

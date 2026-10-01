@@ -65,6 +65,8 @@
     .hint { display: none } html, body { background: var(--bg); overflow: visible }
     .slide { transform: none !important; box-shadow: none } .step { animation: none; opacity: 1; transform: none }
   }
+  .slide { position: absolute !important; left: 50%; top: 50%; margin: -450px 0 0 -800px; }
+  @media print { .slide { position: relative !important; left: 0; top: 0; margin: 0; } }
 </style>
 </head>
 <body>

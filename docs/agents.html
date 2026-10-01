@@ -6,16 +6,16 @@
 <title>Caldova Drive — Who does what: the agents and their triggers</title>
 <style>
   :root {
-    --bg: #0b1220; --panel: #121b2e; --line: #24324d; --text: #e8edf6; --muted: #93a1bb;
-    --fabric: #1fb38f; --foundry: #a46ee0; --studio: #3b8fe8; --app: #c9ced8; --m365: #f0703f; --human: #f2c14e;
+    --bg: #f7f8fb; --panel: #ffffff; --line: #dde3ee; --text: #172033; --muted: #5d6a82;
+    --fabric: #0f9d7a; --foundry: #8a4fd1; --studio: #2470d6; --app: #4a5670; --m365: #e05a24; --human: #c98a00;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #05080f; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
+  html, body { height: 100%; background: #e9edf4; font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; color: var(--text); }
   body { display: grid; place-items: center; overflow: hidden; }
   .slide {
     width: 1600px; height: 900px; padding: 44px 72px 36px; position: relative; flex: none;
-    background: radial-gradient(1200px 600px at 85% -10%, #16305a 0%, transparent 60%),
-                radial-gradient(900px 500px at -10% 110%, #0f3b33 0%, transparent 60%), var(--bg);
+    background: radial-gradient(1200px 600px at 85% -10%, #e3ecff 0%, transparent 60%),
+                radial-gradient(900px 500px at -10% 110%, #def5ec 0%, transparent 60%), var(--bg);
     display: grid; grid-template-rows: auto 1fr auto; gap: 22px; transform-origin: center;
   }
   header { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; }
@@ -29,23 +29,23 @@
 
   .stage { position: relative; }
   svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .wire { fill: none; stroke: #4a5f8c; stroke-width: 2.5; }
+  .wire { fill: none; stroke: #9aa8c2; stroke-width: 2.5; }
   .wire.dash { stroke-dasharray: 7 6; }
   .wire.anim { stroke-dasharray: 8 8; animation: flow 1.2s linear infinite; }
   @keyframes flow { to { stroke-dashoffset: -16; } }
 
   .card {
     position: absolute; border-radius: 16px; padding: 14px 16px; border: 1px solid var(--line);
-    background: linear-gradient(180deg, #16213a 0%, var(--panel) 100%);
+    background: var(--panel); box-shadow: 0 2px 12px #17203312;
     opacity: 0; transform: translateY(10px); animation: in .5s ease forwards;
   }
   @keyframes in { to { opacity: 1; transform: none; } }
   .card h3 { font-size: 19px; font-weight: 650; display: flex; align-items: center; gap: 9px; }
   .card p { color: var(--muted); font-size: 14px; line-height: 1.35; margin-top: 5px; }
-  .card code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; color: #c9d4ea; }
+  .card code { font-family: "Cascadia Code", Consolas, monospace; font-size: 12.5px; color: #2a3550; }
   .tag { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid; }
   .agent { border-width: 2px; }
-  .badge { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: 15px; color: #06101f; flex: none; }
+  .badge { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: 15px; color: #fff; flex: none; }
   .trig { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.35; }
   .trig b { color: var(--text); }
   .trig span { color: var(--muted); }
@@ -53,18 +53,20 @@
   .sub div { border: 1.5px solid color-mix(in srgb, var(--studio) 55%, transparent); border-radius: 10px; padding: 7px 6px; text-align: center; font-size: 13.5px; font-weight: 600; background: color-mix(in srgb, var(--studio) 10%, transparent); }
   .sub small { display: block; color: var(--muted); font-weight: 400; font-size: 11.5px; }
 
-  .lbl { position: absolute; font-size: 13px; line-height: 1.3; color: var(--muted); background: #0b1220e6; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); }
+  .lbl { position: absolute; font-size: 13px; line-height: 1.3; color: var(--muted); background: #ffffffeb; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); }
   .lbl b { color: var(--text); }
-  .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--text); color: #06101f; font-size: 11.5px; font-weight: 800; margin-right: 4px; vertical-align: 1px; }
+  .n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--text); color: #fff; font-size: 11.5px; font-weight: 800; margin-right: 4px; vertical-align: 1px; }
 
   footer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; font-size: 15px; color: var(--muted); line-height: 1.4; }
   footer b { color: var(--text); }
-  .hint { position: fixed; bottom: 10px; right: 14px; color: #3a4762; font-size: 12px; }
+  .hint { position: fixed; bottom: 10px; right: 14px; color: #9aa6bb; font-size: 12px; }
   @media print {
     @page { size: 1600px 900px; margin: 0; }
     .hint { display: none } html, body { background: var(--bg); overflow: visible }
     .slide { transform: none !important } .card { animation: none; opacity: 1; transform: none }
   }
+  .slide { position: absolute !important; left: 50%; top: 50%; margin: -450px 0 0 -800px; }
+  @media print { .slide { position: relative !important; left: 0; top: 0; margin: 0; } }
 </style>
 </head>
 <body>
@@ -108,7 +110,7 @@
     </div>
 
     <!-- Orchestrator -->
-    <div class="card" id="hub" style="left:543px; top:196px; width:370px; animation-delay:.2s; border:2px solid var(--app); box-shadow:0 0 0 6px #c9ced812">
+    <div class="card" id="hub" style="left:543px; top:196px; width:370px; animation-delay:.2s; border:2px solid var(--app); box-shadow:0 0 0 6px #4a567014, 0 6px 24px #17203314">
       <h3><span class="tag" style="color:var(--app)">Orchestrator</span></h3>
       <h3 style="margin-top:8px; font-size:22px">Caldova app · repair worker</h3>
       <p>Azure App Service. One case = one state machine. Every <b style="color:var(--text)">20 s</b> it moves each case forward and checks the four shared mailboxes.</p>
@@ -165,6 +167,7 @@
   const slide = document.getElementById("slide");
   const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
   addEventListener("resize", fit); fit();
+  if (window !== top) document.querySelector(".hint").remove();
   addEventListener("keydown", e => {
     if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     if (e.key === "p" || e.key === "P") print();
@@ -185,7 +188,7 @@
   ];
   const svg = document.getElementById("wires");
   const draw = () => {
-    svg.innerHTML = '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6f86b8"/></marker></defs>';
+    svg.innerHTML = '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7d8cab"/></marker></defs>';
     for (const [f, fs, ft, t, ts, tt, cls] of wires) {
       const [x1, y1] = pt(box(f), fs, ft), [x2, y2] = pt(box(t), ts, tt);
       const horiz = fs === "l" || fs === "r", dx = (x2 - x1) / 2, dy = (y2 - y1) / 2;
