@@ -94,10 +94,7 @@
 <body>
 <section class="slide biz notrans" id="slide">
   <header>
-    <div>
-      <div class="eyebrow" id="eyebrow">The business flow</div>
-      <h1>A bump becomes a booked repair <span id="sub">— nine steps, one decision</span></h1>
-    </div>
+    <div></div>
     <div class="legend">
       <span><i style="background:var(--people)"></i>People</span>
       <span><i style="background:var(--fabric)"></i>Microsoft Fabric</span>
@@ -177,7 +174,7 @@
     </div>
   </div>
 
-  <footer class="biz-foot"><span><b>1</b> customer report</span><span><b>3</b> competing quotes</span><span><b>1</b> human decision</span><span><b>0</b> phone calls</span></footer>
+  <footer class="biz-foot"></footer>
   <footer class="tech">
     <p><b>6 agents:</b> 1 Foundry (evidence) · 4 Copilot Studio (coordinator + Alder, Metro, Riverside) · 1 Fabric data agent. The Activator and pipeline are rules, not agents.</p>
     <p><b>Each step wakes the next.</b> The Caldova app checks every case every 20 s and hands it to whoever acts next. Agents never call each other.</p>
@@ -238,8 +235,6 @@
     if (m === mode) return;
     mode = m;
     slide.classList.toggle("biz", mode === "biz");
-    document.getElementById("eyebrow").textContent = mode === "biz" ? "The business flow" : "Behind the flow";
-    document.getElementById("sub").textContent = mode === "biz" ? "— nine steps, one decision" : "— who acts, and when";
     steps.forEach((el, i) => el.style.transitionDelay = `${(mode === "tech" ? i : steps.length - 1 - i) * 70}ms, ${(mode === "tech" ? i : steps.length - 1 - i) * 70}ms, 0s, 0s`);
     layout(); animateWires(2000);
   };

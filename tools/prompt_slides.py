@@ -182,9 +182,9 @@ DECK_JS = """
   const deckAgents = __AGENTS__;
   const deckPrompts = [...document.querySelectorAll(".pslide")];
   const deckFrames = Object.fromEntries([...document.querySelectorAll(".xframe")].map(f => [f.dataset.id, f]));
-  const deckSeq = [{ frame: "iq" }, { frame: "kinds" }, { mode: "biz" }, { mode: "tech" }];
+  const deckSeq = [{ frame: "iq" }, { frame: "kinds" }, { frame: "intro" }, { mode: "biz" }, { mode: "tech" }];
   deckAgents.forEach((a, k) => deckSeq.push({ mode: "tech", agent: k }, { mode: "tech", agent: k, prompt: true }));
-  deckSeq.push({ mode: "tech" }, { frame: "agents" }, { frame: "intro" });
+  deckSeq.push({ mode: "tech" }, { frame: "agents" });
   let deckAt = -1, flowSeen = false;
   const deckFit = () => document.documentElement.style.setProperty("--s", Math.min(innerWidth / 1600, innerHeight / 900));
   const replayFlow = () => {
@@ -209,15 +209,9 @@ DECK_JS = """
     track.querySelectorAll(".x3 span").forEach(el => el.classList.remove("hl"));
     if (st.mode !== mode) setMode(st.mode); else steps.forEach(el => el.style.transitionDelay = "0s");
     slide.classList.toggle("focus", !!a);
-    document.getElementById("eyebrow").style.color = a ? `var(--${a.color})` : "";
     if (a) {
       a.steps.forEach(id => { const el = s(id); el.classList.add("hl"); el.style.setProperty("--hc", `var(--${a.color})`); });
       if (a.chip) [...track.querySelectorAll(".x3 span")].find(el => el.textContent === a.chip).classList.add("hl");
-      document.getElementById("eyebrow").textContent = `Agent ${st.agent + 1} of ${deckAgents.length}`;
-      document.getElementById("sub").textContent = `— ${a.name}`;
-    } else if (st.mode === "tech") {
-      document.getElementById("eyebrow").textContent = "Behind the flow";
-      document.getElementById("sub").textContent = "— who acts, and when";
     }
   };
   addEventListener("keydown", e => {

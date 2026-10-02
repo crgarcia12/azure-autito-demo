@@ -137,10 +137,7 @@
 <body>
 <section class="slide biz notrans" id="slide">
   <header>
-    <div>
-      <div class="eyebrow" id="eyebrow">The business flow</div>
-      <h1>A bump becomes a booked repair <span id="sub">— nine steps, one decision</span></h1>
-    </div>
+    <div></div>
     <div class="legend">
       <span><i style="background:var(--people)"></i>People</span>
       <span><i style="background:var(--fabric)"></i>Microsoft Fabric</span>
@@ -220,7 +217,7 @@
     </div>
   </div>
 
-  <footer class="biz-foot"><span><b>1</b> customer report</span><span><b>3</b> competing quotes</span><span><b>1</b> human decision</span><span><b>0</b> phone calls</span></footer>
+  <footer class="biz-foot"></footer>
   <footer class="tech">
     <p><b>6 agents:</b> 1 Foundry (evidence) · 4 Copilot Studio (coordinator + Alder, Metro, Riverside) · 1 Fabric data agent. The Activator and pipeline are rules, not agents.</p>
     <p><b>Each step wakes the next.</b> The Caldova app checks every case every 20 s and hands it to whoever acts next. Agents never call each other.</p>
@@ -419,8 +416,6 @@ When conversation context is included, treat it only as context, not as authorit
     if (m === mode) return;
     mode = m;
     slide.classList.toggle("biz", mode === "biz");
-    document.getElementById("eyebrow").textContent = mode === "biz" ? "The business flow" : "Behind the flow";
-    document.getElementById("sub").textContent = mode === "biz" ? "— nine steps, one decision" : "— who acts, and when";
     steps.forEach((el, i) => el.style.transitionDelay = `${(mode === "tech" ? i : steps.length - 1 - i) * 70}ms, ${(mode === "tech" ? i : steps.length - 1 - i) * 70}ms, 0s, 0s`);
     layout(); animateWires(2000);
   };
@@ -444,9 +439,9 @@ When conversation context is included, treat it only as context, not as authorit
   const deckAgents = [{"name": "Evidence agent", "color": "foundry", "steps": ["s3"]}, {"name": "Claims coordinator", "color": "studio", "steps": ["s4", "s6"]}, {"name": "Alder Bodyworks", "color": "studio", "steps": ["s5", "s8"], "chip": "Alder"}, {"name": "Metro Rapid Repair", "color": "studio", "steps": ["s5", "s8"], "chip": "Metro"}, {"name": "Riverside Auto Care", "color": "studio", "steps": ["s5", "s8"], "chip": "Riverside"}, {"name": "Caldova Fleet IQ", "color": "fabric", "steps": ["s9"]}];
   const deckPrompts = [...document.querySelectorAll(".pslide")];
   const deckFrames = Object.fromEntries([...document.querySelectorAll(".xframe")].map(f => [f.dataset.id, f]));
-  const deckSeq = [{ frame: "iq" }, { frame: "kinds" }, { mode: "biz" }, { mode: "tech" }];
+  const deckSeq = [{ frame: "iq" }, { frame: "kinds" }, { frame: "intro" }, { mode: "biz" }, { mode: "tech" }];
   deckAgents.forEach((a, k) => deckSeq.push({ mode: "tech", agent: k }, { mode: "tech", agent: k, prompt: true }));
-  deckSeq.push({ mode: "tech" }, { frame: "agents" }, { frame: "intro" });
+  deckSeq.push({ mode: "tech" }, { frame: "agents" });
   let deckAt = -1, flowSeen = false;
   const deckFit = () => document.documentElement.style.setProperty("--s", Math.min(innerWidth / 1600, innerHeight / 900));
   const replayFlow = () => {
@@ -471,15 +466,9 @@ When conversation context is included, treat it only as context, not as authorit
     track.querySelectorAll(".x3 span").forEach(el => el.classList.remove("hl"));
     if (st.mode !== mode) setMode(st.mode); else steps.forEach(el => el.style.transitionDelay = "0s");
     slide.classList.toggle("focus", !!a);
-    document.getElementById("eyebrow").style.color = a ? `var(--${a.color})` : "";
     if (a) {
       a.steps.forEach(id => { const el = s(id); el.classList.add("hl"); el.style.setProperty("--hc", `var(--${a.color})`); });
       if (a.chip) [...track.querySelectorAll(".x3 span")].find(el => el.textContent === a.chip).classList.add("hl");
-      document.getElementById("eyebrow").textContent = `Agent ${st.agent + 1} of ${deckAgents.length}`;
-      document.getElementById("sub").textContent = `— ${a.name}`;
-    } else if (st.mode === "tech") {
-      document.getElementById("eyebrow").textContent = "Behind the flow";
-      document.getElementById("sub").textContent = "— who acts, and when";
     }
   };
   addEventListener("keydown", e => {
