@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caldova Drive — Who does what: the agents and their triggers</title>
+<title>The agents we add</title>
 <style>
   :root {
     --bg: #f7f8fb; --panel: #ffffff; --line: #dde3ee; --text: #172033; --muted: #5d6a82;
@@ -72,7 +72,7 @@
 <body>
 <section class="slide" id="slide">
   <header>
-    <div></div>
+    <div><h1>The agents we add</h1></div>
     <div class="count">
       <div style="border-color:var(--foundry)"><b style="color:var(--foundry)">1</b><small>Foundry agent</small></div>
       <div style="border-color:var(--studio)"><b style="color:var(--studio)">4</b><small>Copilot Studio agents</small></div>
@@ -87,14 +87,14 @@
     <div class="card" id="fabric" style="left:0; top:10px; width:330px; animation-delay:.05s; border-color:color-mix(in srgb,var(--fabric) 50%,transparent)">
       <h3><span class="tag" style="color:var(--fabric)">Rule, not an agent</span></h3>
       <h3 style="margin-top:8px">Fabric detects the bump</h3>
-      <p>Telemetry → <code>CaldovaFleet</code> KQL → <b style="color:var(--text)">Activator</b> rule on <code>SuspectedImpacts()</code> → <b style="color:var(--text)">Pipeline</b> → app callback</p>
+      <p>Telemetry → Eventhouse KQL → <b style="color:var(--text)">Activator</b> rule on <code>SuspectedImpacts()</code> → <b style="color:var(--text)">Pipeline</b> → app callback</p>
       <div class="trig"><b>Trigger:</b> <span>rule evaluates every minute (≥2.5 g, Δv ≥4 km/h, car then stopped)</span></div>
     </div>
 
     <!-- Foundry -->
     <div class="card agent" id="foundry" style="left:0; top:372px; width:330px; animation-delay:.35s; border-color:var(--foundry)">
       <h3><span class="badge" style="background:var(--foundry)">1</span>Evidence agent</h3>
-      <p>Microsoft Foundry · <code>caldova-incident-evidence</code> v2 (GPT-4.1 vision)</p>
+      <p>Microsoft Foundry · incident evidence (GPT-4.1 vision)</p>
       <p>3 calls: inspect photos → verify privacy redaction → write repair brief + PDF</p>
       <div class="trig"><b>Trigger:</b> <span>case status becomes <code>evidence_received</code> (customer pressed Submit)</span></div>
     </div>
@@ -109,7 +109,7 @@
     <!-- Orchestrator -->
     <div class="card" id="hub" style="left:543px; top:196px; width:370px; animation-delay:.2s; border:2px solid var(--app); box-shadow:0 0 0 6px #4a567014, 0 6px 24px #17203314">
       <h3><span class="tag" style="color:var(--app)">Orchestrator</span></h3>
-      <h3 style="margin-top:8px; font-size:22px">Caldova app · repair worker</h3>
+      <h3 style="margin-top:8px; font-size:22px">Operations app · repair worker</h3>
       <p>Azure App Service. One case = one state machine. Every <b style="color:var(--text)">20 s</b> it moves each case forward and checks the four shared mailboxes.</p>
       <p style="font-size:12.5px; margin-top:7px"><code>evidence_received → report_ready → requesting_quotes → recommendation_ready → approved → booked</code></p>
     </div>
@@ -131,8 +131,8 @@
 
     <!-- Data agent -->
     <div class="card agent" id="data" style="left:563px; top:448px; width:330px; animation-delay:.65s; border-color:var(--fabric)">
-      <h3><span class="badge" style="background:var(--fabric)">6</span>Caldova Fleet IQ</h3>
-      <p>Fabric data agent over the <code>FleetIntelligence</code> Lakehouse + ontology</p>
+      <h3><span class="badge" style="background:var(--fabric)">6</span>Fleet data agent</h3>
+      <p>Fabric data agent over the <code>FleetIntelligence</code> Lakehouse</p>
       <div class="trig"><b>Trigger:</b> <span>a person asks a question (Fabric or Microsoft 365 Copilot)</span></div>
     </div>
 

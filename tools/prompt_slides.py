@@ -1,4 +1,4 @@
-"""Build docs/prompts.html: one slide per agent, showing the exact prompts read from source."""
+"""Build the presentation from source instructions, omitting company names in display copies."""
 import ast
 import html
 import json
@@ -47,6 +47,13 @@ GUARDS = [
 
 
 def render(text: str, extra: list[str] = ()) -> str:
+    for original, display in (
+        ("You are Caldova Drive, the operations copilot", "You are the operations copilot"),
+        ("Caldova's", "the insurer's"),
+        ("Caldova Repair Policy", "Repair Policy"),
+        ("Caldova RP-02", "RP-02"),
+    ):
+        text = text.replace(original, display)
     out = html.escape(text)
     for pattern in list(extra):
         out = re.sub(f"({pattern})", r'<mark class="diff">\1</mark>', out)
@@ -65,7 +72,7 @@ def slide(n, color, product, name, ident, facts, prompts, small=False):
 <section class="pslide" style="--c:var(--{color})">
   <header><div class="who"><span class="badge">{n}</span><div><div class="eyebrow">{product}</div><h1>{name}</h1><code class="id">{ident}</code></div></div><div class="page">{n} / 6</div></header>
   <div class="body"><dl class="facts">{facts_html}</dl><div class="prompts">{panels}</div></div>
-  <footer><span><mark>highlighted</mark> = guardrail</span><span><mark class="diff">blue</mark> = what makes this agent different</span><span>Exact text, read from the deployed source.</span></footer>
+  <footer><span><mark>highlighted</mark> = guardrail</span><span><mark class="diff">blue</mark> = what makes this agent different</span><span>Source instructions; company names omitted.</span></footer>
 </section>"""
 
 
@@ -74,12 +81,12 @@ def build() -> str:
     photo, privacy, report = evidence_tasks()
     fleet = constant("tools/intelligence.py", "INSTRUCTIONS")
     garages = {
-        "alder": ("Alder Bodyworks", "alder.repairs@", "Fastest + cheapest, but aftermarket parts: excluded", [r"NEW AFTERMARKET", r"does NOT comply with Caldova RP-02", r"12-month warranty"]),
+        "alder": ("Alder Bodyworks", "alder.repairs@", "Fastest + cheapest, but aftermarket parts: excluded", [r"NEW AFTERMARKET", r"does NOT comply with RP-02", r"12-month warranty"]),
         "metro": ("Metro Rapid Repair", "metro.repairs@", "Priority slot, back on the road sooner", [r"Explain that the price includes priority access to an earlier workshop slot\.", r"18-month warranty"]),
         "riverside": ("Riverside Auto Care", "riverside.repairs@", "Balanced price and availability", [r"Present the balanced cost and workshop-availability option\.", r"12-month warranty"]),
     }
     slides = [slide(
-        1, "foundry", "Microsoft Foundry Agent Service", "Evidence agent", "caldova-incident-evidence · v2 · GPT-4.1 vision",
+        1, "foundry", "Microsoft Foundry Agent Service", "Evidence agent", "Incident evidence · v2 · GPT-4.1 vision",
         [("Wakes", "Customer submits photos + explanation"),
          ("Does", "3 calls per photo set: inspect → verify redaction → write the garage-facing brief"),
          ("Two prompt layers", "Agent instructions live in Foundry; each call adds a task prompt with the exact JSON shape"),
@@ -89,9 +96,9 @@ def build() -> str:
          ("Task 1 · inspect photo", render(photo)), ("Task 2 · verify redaction", render(privacy)), ("Task 3 · repair brief", render(report))],
         small=True,
     ), slide(
-        2, "studio", "Copilot Studio", "Claims coordinator", "Caldova Repair Coordinator · claims@",
+        2, "studio", "Copilot Studio", "Claims coordinator", "Repair coordinator · claims mailbox",
         [("Wakes", "A: brief ready → write the quote request<br>B: three quotes in → recommend"),
-         ("Called by", "Caldova app, over Direct Line with a protected channel secret"),
+         ("Called by", "The operations app, over Direct Line with a protected channel secret"),
          ("Output checked", "Parts eligibility first, then cost. The pick, excluded IDs and policy version must match the app"),
          ("Then", "Operator keeps the pick or chooses another compliant quote with a reason"),
          ("Never", "Sends email or books. The app does that after approval")],
@@ -110,7 +117,7 @@ def build() -> str:
             small=True,
         ))
     slides.append(slide(
-        6, "fabric", "Fabric data agent · Fabric IQ", "Caldova Fleet IQ", "Lakehouse FleetIntelligence · in Microsoft 365 Copilot",
+        6, "fabric", "Fabric data agent · Fabric IQ", "Fleet data agent", "Lakehouse FleetIntelligence · in Microsoft 365 Copilot",
         [("Wakes", "Someone asks a question in Fabric or Microsoft 365 Copilot"),
          ("Reads", "Vehicles, Branches, Rentals, VehicleState, DailyMileage, Incidents, RepairQuotes"),
          ("Knows", "Units, the Madrid reporting calendar, and approved ≠ booked"),
@@ -129,7 +136,7 @@ AGENTS = [
     {"name": "Alder Bodyworks", "color": "studio", "steps": ["s5", "s8"], "chip": "Alder"},
     {"name": "Metro Rapid Repair", "color": "studio", "steps": ["s5", "s8"], "chip": "Metro"},
     {"name": "Riverside Auto Care", "color": "studio", "steps": ["s5", "s8"], "chip": "Riverside"},
-    {"name": "Caldova Fleet IQ", "color": "fabric", "steps": ["s9"]},
+    {"name": "Fleet data agent", "color": "fabric", "steps": ["s9"]},
 ]
 
 PROMPT_CSS = """
@@ -184,9 +191,9 @@ DECK_JS = """
   const deckAgents = __AGENTS__;
   const deckPrompts = [...document.querySelectorAll(".pslide")];
   const deckFrames = Object.fromEntries([...document.querySelectorAll(".xframe")].map(f => [f.dataset.id, f]));
-  const deckSeq = [{ frame: "iq" }, { frame: "kinds" }, { frame: "intro" }, { mode: "biz" }, { mode: "tech" }];
+  const deckSeq = [{ frame: "intro" }, { frame: "agents" }, { mode: "tech" }];
   deckAgents.forEach((a, k) => deckSeq.push({ mode: "tech", agent: k }, { mode: "tech", agent: k, prompt: true }));
-  deckSeq.push({ mode: "tech" }, { frame: "agents" });
+  deckSeq.push({ mode: "tech" }, { frame: "iq" }, { frame: "kinds" }, { mode: "biz" });
   let deckAt = -1, flowSeen = false;
   const deckFit = () => document.documentElement.style.setProperty("--s", Math.min(innerWidth / 1600, innerHeight / 900));
   const replayFlow = () => {
@@ -236,7 +243,7 @@ DECK_JS = """
 FRAMES = """
 <iframe class="xframe" data-id="iq" src="iq.html" tabindex="-1" title="Microsoft IQ"></iframe>
 <iframe class="xframe" data-id="kinds" src="agent-kinds.html" tabindex="-1" title="Personal agents vs Always-on agents"></iframe>
-<iframe class="xframe" data-id="intro" src="intro.html" tabindex="-1" title="The story"></iframe>
+<iframe class="xframe" data-id="intro" src="intro.html" tabindex="-1" title="The insurance operation"></iframe>
 <iframe class="xframe" data-id="agents" src="agents.html" tabindex="-1" title="Agents and triggers"></iframe>
 <div class="deck-nav"><button data-nav="-1" aria-label="Previous">‹</button><span id="deckPos"></span><button data-nav="1" aria-label="Next">›</button></div>
 """
@@ -251,7 +258,7 @@ def deck_page(slides: str) -> str:
     for needle in ("</style>", hint, "</body>", "<title>"):
         if needle not in flow:
             raise ValueError(f"flow-animated.html changed; missing {needle!r}")
-    flow = re.sub(r"<title>.*?</title>", "<title>Caldova Drive — From a bump to a booked repair</title>", flow)
+    flow = re.sub(r"<title>.*?</title>", "<title>From incident to repair</title>", flow)
     flow = flow.replace("</style>", PROMPT_CSS + DECK_CSS + "</style>", 1)
     flow = flow.replace(hint, slides + FRAMES, 1)
     js = DECK_JS.replace("__AGENTS__", json.dumps(AGENTS))
@@ -263,7 +270,7 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caldova Drive — The agents and their prompts</title>
+<title>The agents and their prompts</title>
 <style>
   :root { --bg:#f7f8fb; --card:#fff; --line:#dde3ee; --text:#172033; --muted:#5d6a82; --fabric:#0f9d7a; --foundry:#8a4fd1; --studio:#2470d6; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
