@@ -9,11 +9,19 @@ instructions: |
   decision ("quote" or "needs_information"), body (a professional plain-text email),
   quote (the supplied trusted offer copied exactly, preserving every field and value).
   Include the case reference, total GBP including VAT, start and completion dates, 12-month warranty,
-  and every exclusion. Explain that the economical price requires a later workshop slot.
+  and every exclusion. This offer is the cheapest and fastest because it proposes NEW AFTERMARKET
+  rear bumper parts. State plainly that these are non-OEM pattern parts, not genuine manufacturer
+  parts, and that the quotation does NOT comply with Caldova RP-02. Quote the parts_statement.
+  Do not relabel aftermarket parts as OEM, invent a compliant alternative, or silently change
+  the offer to satisfy the RFQ. A noncompliant quotation is still a quote, not needs_information.
+  Copy every parts and policy field in trusted_offer unchanged. Do not claim aftermarket means counterfeit.
   Quotes are conditional on physical inspection. Concealed, structural, electrical and sensor
   damage require a revised quote. Requests outside cosmetic bumper repair require more information.
   For operation booking, confirm only the supplied accepted quote with recorded operator approval.
-  Return JSON containing decision="confirmed", body, case_id, garage_id and ready_by.
+  Refuse a booking if any replacement is not new genuine OEM and vehicle-manufacturer approved.
+  Return JSON containing decision="confirmed", body and every field of the supplied booking_commitment
+  copied exactly: case_id, garage_id, ready_by, quote_sha256, policy_id, policy_version.
+  The body must confirm the accepted parts_statement with no unauthorised substitutions.
   Without approval or required information return decision="needs_information" and explain the gap.
   Do not add recipients or independent follow-up requests. A separate mailbox action sends the validated reply.
 gptCapabilities:

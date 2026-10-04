@@ -29,6 +29,17 @@ Vehicles is the register. Branches are depots. Rentals links vehicles to corpora
 Incidents links CaseId to VehicleId and records the actual workflow status, privacy-cleared report summary,
 quote count, recommended garage, recorded operator approval and confirmed return date.
 RepairQuotes contains the actual replies received from the three approved repair-centre inboxes.
+PartsComplianceStatus and PartsEligible record quotation-level parts eligibility, NOT supplier-list approval.
+RP-02 of CD-REP-001 permits only new genuine OEM replacement parts approved for the vehicle.
+Aftermarket/non-OEM, used, refurbished and remanufactured replacements are prohibited.
+RP-03 requires explicit parts evidence; unknown is clarification_required, not compliant.
+RP-04 permits an explicitly declared repair without replacement parts.
+Rank only PartsEligible=true quotations after applying these checks, even when an excluded quote is fastest and cheapest.
+PartsDeclaration, PartsItems, PartsComplianceReasons, PartsPolicyId and PartsPolicyVersion preserve the evidence and clauses.
+PartsPolicyDocumentUrl links the controlled Word policy; QuoteEmailUrl links the received supplier email.
+not_assessed_historical means an older completed booking was not assessed under this new policy; do not rewrite its history.
+Status quote_review_required / PartsReviewRequired=true means no eligible repair quotation; obtain clarification or a revised compliant quote.
+An operator override may choose another compliant quotation, never waive RP-02.
 Do not claim a repair is booked unless Incidents.Status is booked and ExpectedReturn is populated.
 Status recommendation_ready means the recommendation is awaiting operator approval.
 Use AwaitingOperatorApproval=true to identify those cases, not a literal status named awaiting_approval.
@@ -163,7 +174,7 @@ def create_ontology(cloud: Cloud, state: dict, schemas: dict[str, pa.Schema]) ->
         definitions.append(part(
             "rules/RepairApproval.tmdl",
             "rule RepairApproval\n"
-            "\tstatement: Impact telemetry indicates a possible incident, not confirmed liability or coverage. Status recommendation_ready means awaiting human approval. ApprovalRecorded is not BookingConfirmed. Quotations are conditional on inspection. Booking requires a recorded operator approval, and only a garage confirmation makes the incident booked.\n"
+            "\tstatement: Impact telemetry indicates a possible incident, not confirmed liability or coverage. Status recommendation_ready means awaiting human approval. ApprovalRecorded is not BookingConfirmed. CD-REP-001 RP-02 permits only new genuine OEM replacement parts; RP-03 requires explicit evidence. Only PartsEligible quotations can be ranked or approved, even if an excluded offer is fastest and cheapest. An override cannot waive parts compliance. Quotations are conditional on inspection. Booking requires a recorded operator approval, and only a garage confirmation makes the incident booked.\n"
             "\truleReferencedEntity Incident\n\t\tpropertyScope: all\n",
         ))
         refs.append("ref rule RepairApproval\n")

@@ -15,9 +15,11 @@
       "name": "Alder Bodyworks",
       "mailbox": "alder.repairs@caldova08667473.onmicrosoft.com",
       "agent_schema": "cdv_alderrepairs",
-      "lead_business_days": 5,
-      "repair_business_days": 2,
+      "lead_business_days": 1,
+      "repair_business_days": 1,
       "bumper_cosmetic_quote": 450,
+      "parts_origin": "aftermarket",
+      "parts_manufacturer": "Northline Components",
       "approved": true,
       "warranty_months": 12
     },
@@ -26,9 +28,10 @@
       "name": "Metro Rapid Repair",
       "mailbox": "metro.repairs@caldova08667473.onmicrosoft.com",
       "agent_schema": "cdv_metrorepairs",
-      "lead_business_days": 1,
+      "lead_business_days": 2,
       "repair_business_days": 1,
       "bumper_cosmetic_quote": 600,
+      "parts_origin": "genuine_oem",
       "approved": true,
       "warranty_months": 18
     },
@@ -40,6 +43,7 @@
       "lead_business_days": 3,
       "repair_business_days": 2,
       "bumper_cosmetic_quote": 550,
+      "parts_origin": "genuine_oem",
       "approved": true,
       "warranty_months": 12
     }

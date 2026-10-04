@@ -5,6 +5,7 @@ authenticationMode: None
 authenticationTrigger: AsNeeded
 configuration:
   settings:
+    AnonymousAccessDisabled: true
     GenerativeActionsEnabled: true
 
   isAgentConnectable: true
@@ -20,6 +21,6 @@ configuration:
   recognizer:
     kind: GenerativeAIRecognizer
 
-publishedOn: 2026-09-30T21:28:57.0000000Z
+publishedOn: 2026-09-30T23:33:05.0000000Z
 template: default-2.1.0
 language: 1033

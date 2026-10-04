@@ -74,7 +74,7 @@ def build() -> str:
     photo, privacy, report = evidence_tasks()
     fleet = constant("tools/intelligence.py", "INSTRUCTIONS")
     garages = {
-        "alder": ("Alder Bodyworks", "alder.repairs@", "Cheapest repair, later workshop slot", [r"Explain that the economical price requires a later workshop slot\.", r"12-month warranty"]),
+        "alder": ("Alder Bodyworks", "alder.repairs@", "Fastest + cheapest, but aftermarket parts: excluded", [r"NEW AFTERMARKET", r"does NOT comply with Caldova RP-02", r"12-month warranty"]),
         "metro": ("Metro Rapid Repair", "metro.repairs@", "Priority slot, back on the road sooner", [r"Explain that the price includes priority access to an earlier workshop slot\.", r"18-month warranty"]),
         "riverside": ("Riverside Auto Care", "riverside.repairs@", "Balanced price and availability", [r"Present the balanced cost and workshop-availability option\.", r"12-month warranty"]),
     }
@@ -92,10 +92,11 @@ def build() -> str:
         2, "studio", "Copilot Studio", "Claims coordinator", "Caldova Repair Coordinator · claims@",
         [("Wakes", "A: brief ready → write the quote request<br>B: three quotes in → recommend"),
          ("Called by", "Caldova app, over Direct Line with a protected channel secret"),
-         ("Output checked", "The pick must match the app's own cost calculation; <b>requires_approval</b> must be true"),
-         ("Then", "Operator keeps the pick or overrides it with a reason"),
+         ("Output checked", "Parts eligibility first, then cost. The pick, excluded IDs and policy version must match the app"),
+         ("Then", "Operator keeps the pick or chooses another compliant quote with a reason"),
          ("Never", "Sends email or books. The app does that after approval")],
         [("Agent instructions · Copilot Studio", render(studio("coordinator")))],
+        small=True,
     )]
     for i, (key, (name, mailbox, pitch, diffs)) in enumerate(garages.items(), start=3):
         slides.append(slide(
@@ -103,16 +104,17 @@ def build() -> str:
             [("Wakes", "An email lands in its own shared mailbox"),
              ("Position", pitch),
              ("Quote", "Uses only the trusted rate card + capacity the app supplies; must copy the offer exactly"),
-             ("Booking", "Confirms only a quote with recorded operator approval"),
-             ("Output checked", "Price, dates and garage ID re-validated before the reply is sent from the mailbox")],
+             ("Booking", "Only compliant parts + recorded operator approval; exact quotation fingerprint confirmed"),
+             ("Output checked", "Parts, price, dates, policy version and garage ID before the reply is sent")],
             [("Agent instructions · Copilot Studio", render(studio(key), diffs))],
+            small=True,
         ))
     slides.append(slide(
-        6, "fabric", "Fabric data agent · Fabric IQ", "Caldova Fleet IQ", "Lakehouse FleetIntelligence + ontology · in Microsoft 365 Copilot",
+        6, "fabric", "Fabric data agent · Fabric IQ", "Caldova Fleet IQ", "Lakehouse FleetIntelligence · in Microsoft 365 Copilot",
         [("Wakes", "Someone asks a question in Fabric or Microsoft 365 Copilot"),
          ("Reads", "Vehicles, Branches, Rentals, VehicleState, DailyMileage, Incidents, RepairQuotes"),
          ("Knows", "Units, the Madrid reporting calendar, and approved ≠ booked"),
-         ("New", "Recommended vs approved garage, overrides and the reason"),
+         ("New", "Parts eligibility, policy clauses, recommended vs approved garage and valid overrides"),
          ("Never", "Invents data, contacts drivers or changes rentals")],
         [("Agent instructions · Fabric data agent", render(fleet, [r"The operator may book a different repair centre than recommended: ApprovedGarage is the operator&#x27;s choice,\nRecommendedGarage is the agent&#x27;s\. OverrodeRecommendation=true marks such cases, and OverrideReason records why\."]))],
         small=True,
@@ -145,7 +147,7 @@ PROMPT_CSS = """
   .pslide .facts dt { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--c); margin-top: 12px; }
   .pslide .facts dt:first-child { margin-top: 0; }
   .pslide .facts dd { font-size: 17px; line-height: 1.38; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-  .pslide .prompts { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+  .pslide .prompts { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
   .pslide .prompt { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--c); border-radius: 12px; padding: 12px 16px; box-shadow: 0 2px 10px #17203310; min-height: 0; }
   .pslide .prompt:only-child { flex: 1; }
   .pslide .ptitle { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }

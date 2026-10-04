@@ -12,7 +12,7 @@ import httpx
 from tools.cloud import Cloud, ROOT, load_state
 
 
-def main(existing_case: str | None = None):
+def main(existing_case: str | None = None, *, leave_ready: bool = False):
     cloud, state = Cloud(), load_state()
     token = cloud.credential.get_token(f"api://{state['agent_app_id']}/.default").token
     origin = state["appUrl"]
@@ -66,14 +66,36 @@ def main(existing_case: str | None = None):
             response = operator.get(origin + f"/api/incidents/{case_id}")
             response.raise_for_status()
             case = response.json()
-            if case["status"] in {"report_review_required", "assistance_required"}:
+            if case["status"] in {"report_review_required", "assistance_required", "quote_review_required"}:
                 raise RuntimeError("The genuine model routed the test for manual review; no fabricated quote is accepted.")
             if case["status"] == "recommendation_ready" and case["recommendation"].get("agent") and not approved:
+                if not any("Repair recommendation ready for your approval" in item["subject"] and item["to"] == "admin@caldova08667473.onmicrosoft.com" for item in case["correspondence"]):
+                    continue
                 assert len(case["quotes"]) == 3
                 assert case["recommendation"]["garage_id"] == "metro"
+                comparison = case["recommendation"]
+                assert set(comparison["eligible_garage_ids"]) == {"metro", "riverside"}
+                assert min(comparison["quotes"], key=lambda item: float(item["amount_gbp"]))["garage_id"] == "alder"
+                assert min(comparison["quotes"], key=lambda item: item["ready_by"])["garage_id"] == "alder"
+                assert case["quote_compliance"]["alder"]["status"] == "noncompliant"
+                assert comparison["policy"]["document_url"]
                 for quote in case["quotes"].values():
                     native = state["studio_agents"]["cdv_" + quote["garage_id"] + "repairs"]
                     assert quote["agent_id"] == native["id"]
+                rejected = operator.post(origin + f"/api/incidents/{case_id}/approve", json={
+                    "version": case["version"], "garage_id": "alder", "reason": "This is the fastest and cheapest offer; approve it anyway.",
+                })
+                assert rejected.status_code == 409 and "RP-02" in rejected.json()["error"]
+                if leave_ready:
+                    result = {
+                        "case_id": case_id, "vehicle_id": vehicle["VehicleId"], "status": case["status"],
+                        "policy": comparison["policy"], "recommended": comparison["garage_id"],
+                        "excluded": "alder", "aftermarket_override_rejected": True,
+                        "operator_decision_email_sent": True, "elapsed_seconds": round(time.monotonic() - start, 2),
+                    }
+                    (ROOT / ".local" / "oem-ready-case.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+                    print(json.dumps(result))
+                    return
                 response = operator.post(origin + f"/api/incidents/{case_id}/approve", json={"version": case["version"]})
                 response.raise_for_status()
                 approved = True
@@ -91,10 +113,14 @@ def main(existing_case: str | None = None):
                     "native_agents": [quote["agent_id"] for quote in case["quotes"].values()],
                     "coordinator_agent": case["recommendation"]["agent"],
                     "evidence_agent": evidence_agent,
+                    "policy": case["approval"]["policy"],
+                    "approved_quote_sha256": case["approval"]["quote_sha256"],
+                    "confirmed_quote_sha256": case["booking"]["quote_sha256"],
                     "confirmed_by": case["booking"]["garage_id"],
                     "correspondence_records": len(case["correspondence"]),
                     "elapsed_seconds": round(time.monotonic() - start, 2),
                 }
+                assert result["approved_quote_sha256"] == result["confirmed_quote_sha256"]
                 (ROOT / ".local" / "secured-hosted-e2e.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
                 print(json.dumps(result))
                 return
@@ -104,4 +130,6 @@ def main(existing_case: str | None = None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", help="Continue an existing untouched case without claiming a new primary-trigger timing check.")
-    main(parser.parse_args().case)
+    parser.add_argument("--leave-ready", action="store_true", help="Verify the OEM decision and invalid override, then leave the case unapproved for presentation.")
+    args = parser.parse_args()
+    main(args.case, leave_ready=args.leave_ready)

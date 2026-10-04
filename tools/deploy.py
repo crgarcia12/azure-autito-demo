@@ -100,7 +100,7 @@ def deployment_zip(*, prebuilt: bool = False, code_only: bool = False) -> str:
     destination = ROOT / ".local" / "caldova-drive.zip"
     digest = hashlib.sha256()
     with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
-        for directory in ("fleet", "static", "fabric"):
+        for directory in ("fleet", "static", "fabric", "policies"):
             for path in (ROOT / directory).rglob("*"):
                 if path.is_file() and "__pycache__" not in path.parts:
                     archive.write(path, path.relative_to(ROOT).as_posix())

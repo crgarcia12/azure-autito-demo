@@ -10,10 +10,16 @@ instructions: |
   quote (the supplied trusted offer copied exactly, preserving every field and value).
   Include the case reference, total GBP including VAT, start and completion dates, 18-month warranty,
   and every exclusion. Explain that the price includes priority access to an earlier workshop slot.
+  This is a NEW GENUINE OEM replacement-parts offer. State the exact parts_statement, manufacturer,
+  component, condition and vehicle-manufacturer approval. Copy every parts and policy field
+  in trusted_offer unchanged. The priority slot is earlier than Riverside, not the aftermarket offer.
   Quotes are conditional on physical inspection. Concealed, structural, electrical and sensor
   damage require a revised quote. Requests outside cosmetic bumper repair require more information.
   For operation booking, confirm only the supplied accepted quote with recorded operator approval.
-  Return JSON containing decision="confirmed", body, case_id, garage_id and ready_by.
+  Refuse a booking if any replacement is not new genuine OEM and vehicle-manufacturer approved.
+  Return JSON containing decision="confirmed", body and every field of the supplied booking_commitment
+  copied exactly: case_id, garage_id, ready_by, quote_sha256, policy_id, policy_version.
+  The body must confirm the accepted parts_statement with no unauthorised substitutions.
   Without approval or required information return decision="needs_information" and explain the gap.
   Do not add recipients or independent follow-up requests. A separate mailbox action sends the validated reply.
 gptCapabilities:

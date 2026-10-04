@@ -17,7 +17,7 @@ import pyarrow as pa
 
 from fleet.config import ROOT, data_credential, settings
 from fleet.domain import day_bounds, utc_text
-from fleet.insurance import Incidents, insurance_config
+from fleet.insurance import Incidents, Quote, insurance_config, quote_compliance
 from fleet.storage import StateStore
 
 
@@ -31,6 +31,34 @@ def clean_value(value: Any) -> Any:
     if isinstance(value, list):
         return [clean_value(v) for v in value]
     return value
+
+
+def repair_quote_fact(case: dict, quote: dict, config: dict) -> dict:
+    decision = case.get("recommendation", {})
+    recorded = next((item.get("compliance") for item in decision.get("quotes", []) if item["garage_id"] == quote["garage_id"]), None)
+    compliance = recorded or (
+        {"status": "not_assessed_historical", "eligible": False, "findings": []}
+        if case["status"] in {"booked", "closed"} else quote_compliance(Quote.model_validate(quote))
+    )
+    message = next((item for item in case.get("correspondence", []) if item["id"] == quote["email_id"]), {})
+    return {
+        "QuoteId": f"{case['id']}|{quote['garage_id']}",
+        "CaseId": case["id"], "VehicleId": case["vehicle_id"], "GarageId": quote["garage_id"],
+        "AmountGBP": float(quote["amount_gbp"]), "AvailableFrom": quote["available_from"],
+        "ReadyBy": quote["ready_by"], "ValidUntil": quote["valid_until"],
+        "WarrantyMonths": quote["warranty_months"], "Scope": quote["scope"],
+        "Exclusions": quote["exclusions"], "NativeAgentId": quote["agent_id"],
+        "DowntimeCostPerDayGBP": float(config["downtime_cost_per_day"]),
+        "IncidentDetectedAt": case["created_at"],
+        "PartsReplacementRequired": {True: "required", False: "not_required", None: "not_recorded"}[quote.get("replacement_parts_required")],
+        "PartsItems": json.dumps(quote.get("replacement_parts", [])),
+        "PartsDeclaration": quote.get("parts_statement", ""),
+        "PartsComplianceStatus": compliance["status"], "PartsEligible": compliance["eligible"],
+        "PartsComplianceReasons": "; ".join(f"{item['clause']}: {item['reason']}" for item in compliance["findings"]),
+        "PartsPolicyId": quote.get("policy_id", ""), "PartsPolicyVersion": quote.get("policy_version", ""),
+        "PartsPolicyDocumentUrl": decision.get("policy", {}).get("document_url") or "",
+        "QuoteEmailId": quote["email_id"], "QuoteEmailUrl": message.get("web_url", ""),
+    }
 
 
 class FabricData:
@@ -157,7 +185,7 @@ class FabricData:
                 "Status": case["status"], "DetectedAt": case["created_at"],
                 "UpdatedAt": case["updated_at"], "EvidenceCount": len(case["photos"]),
                 "QuoteCount": len(case["quotes"]),
-                "RecommendedGarage": case.get("recommendation", {}).get("garage_id", ""),
+                "RecommendedGarage": case.get("recommendation", {}).get("garage_id") or "",
                 "ReportSummary": case["repair_report"]["summary"] if case.get("repair_report", {}).get("privacy_passed") else "",
                 "ApprovedBy": case.get("approval", {}).get("by", ""),
                 "ApprovedGarage": case.get("approval", {}).get("garage_id", ""),
@@ -167,18 +195,13 @@ class FabricData:
                 "AwaitingOperatorApproval": case["status"] == "recommendation_ready" and bool(case.get("recommendation", {}).get("agent")),
                 "ApprovalRecorded": bool(case.get("approval")),
                 "BookingConfirmed": case["status"] == "booked" and bool(case.get("booking", {}).get("email_id")),
+                "RepairPolicyId": case.get("recommendation", {}).get("policy", {}).get("id", ""),
+                "RepairPolicyVersion": case.get("recommendation", {}).get("policy", {}).get("version", ""),
+                "RepairPolicyDocumentUrl": case.get("recommendation", {}).get("policy", {}).get("document_url") or "",
+                "PartsReviewRequired": case["status"] == "quote_review_required",
             } for case in cases]
             policy = insurance_config()
-            quotes = [{
-                "QuoteId": f"{case['id']}|{quote['garage_id']}",
-                "CaseId": case["id"], "VehicleId": case["vehicle_id"], "GarageId": quote["garage_id"],
-                "AmountGBP": float(quote["amount_gbp"]), "AvailableFrom": quote["available_from"],
-                "ReadyBy": quote["ready_by"], "ValidUntil": quote["valid_until"],
-                "WarrantyMonths": quote["warranty_months"], "Scope": quote["scope"],
-                "Exclusions": quote["exclusions"], "NativeAgentId": quote["agent_id"],
-                "DowntimeCostPerDayGBP": float(policy["downtime_cost_per_day"]),
-                "IncidentDetectedAt": case["created_at"],
-            } for case in cases for quote in case["quotes"].values()]
+            quotes = [repair_quote_fact(case, quote, policy) for case in cases for quote in case["quotes"].values()]
             if quotes:
                 tables["RepairQuotes"] = quotes
         for name, rows in tables.items():

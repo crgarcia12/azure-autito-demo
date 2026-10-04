@@ -4,7 +4,7 @@
 
 **A rental customer has a minor bump while parking. Caldova detects the possible incident, helps the customer report it, obtains repair options, and prepares a recommendation. The operations manager reviews the evidence and approves the booking.**
 
-The customer tells the story once. The insurer, rental operations team and repair centres work from the same case.
+The customer tells the story once. The insurer, rental operations team and repair centres work from the same case. The tempting offer is both cheapest and fastest, but proposes aftermarket parts. Caldova's Word repair policy requires new genuine OEM parts, so the agent must exclude that offer before comparing the compliant alternatives.
 
 ## The story at a glance
 
@@ -60,6 +60,7 @@ Use **Edge Work 2**, signed in as `admin@caldova08667473.onmicrosoft.com` for th
 | Claims coordinator | [Caldova Repair Coordinator in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/02d7a04b-93fc-4cb3-b07c-49156794520c/overview) |
 | Repair agent | [Metro Rapid Repair in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/988bbfcb-a31e-4a36-8d4b-ea88da60f225/overview) |
 | Email | [Outlook](https://outlook.office.com/mail/) → profile → **Open another mailbox** → `claims@caldova08667473.onmicrosoft.com` |
+| Word repair policy | [Caldova Drive Repair Policy - CD-REP-001 v1.0](https://caldova08667473-my.sharepoint.com/personal/admin_caldova08667473_onmicrosoft_com/_layouts/15/Doc.aspx?sourcedoc=%7BC468D6E0-99AD-4D58-A4A5-8894BDF73578%7D&file=Caldova-Repair-Policy.docx&action=default&mobileredirect=true) |
 | Microsoft 365 Copilot | [Caldova Microsoft 365 Copilot](https://m365.cloud.microsoft/chat/?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572) |
 
 For a short presentation, use the prepared cases at the matching stage. For a fresh run, select a vehicle without an active incident and follow the sequence from the beginning.
@@ -154,23 +155,23 @@ Follow **Report your incident securely**.
 
 **Say:** “The agent assembles a useful case, but it does not decide liability, insurance coverage or whether the vehicle is safe to drive. It records what is visible and what still needs inspection.”
 
-**Alternative branch:** Open case **CDI-BCB6A3CE7C**, whose wider photo requires inspection. Show that it has no quotation emails and cannot be approved automatically. The operator can request clearer evidence. This demonstrates that uncertain evidence stops the automation rather than becoming a confident-looking decision.
+**Alternative branch:** For a separate inspection demonstration, use a fresh case with unclear or wider damage evidence. If Foundry routes it to **Evidence review required**, show that it has no quotation emails and cannot be approved automatically. The operator can request clearer evidence. Do not claim that the model has approved an image which it actually routed for review.
 
 ## 7. The claims coordinator asks three repair centres for quotes
 
-**Story:** The claims coordinator sends the same privacy-cleared repair brief to three approved centres. It asks for price, availability and return-to-service date—not just the cheapest repair.
+**Story:** Before requesting quotes, the coordinator applies Caldova's repair policy. **RP-02** allows only new genuine OEM replacement parts; **RP-03** requires written parts evidence. The same privacy-cleared repair brief and policy go to all three approved centres.
 
-**Open and do:** Open **Caldova Repair Coordinator** in Copilot Studio. Show its instructions and approval boundary. Then open the case's **The actual correspondence**, or the **Sent Items** folder in the claims mailbox. Expand the three `[RFQ]` messages and show the attached repair brief.
+**Open and do:** First open the Word repair policy and highlight RP-02, RP-03 and RP-05. Then open **Caldova Repair Coordinator** in Copilot Studio. Show its instructions and approval boundary. Open the case's **The actual correspondence**, or **Sent Items** in the claims mailbox, and expand the three `[RFQ]` messages. Show the attached repair brief and the policy link/clauses included with the request.
 
 **Feature:** A real Copilot Studio agent; grounded RFQ generation; real Microsoft 365 email delivery.
 
-**Say:** “The coordinator does the repetitive preparation and correspondence. Each centre receives the same repair scope, so the responses can be compared fairly.”
+**Say:** “The business rule lives in a real Word document. Being an approved supplier does not make every offer compliant: the centre must explicitly tell us what parts it proposes.”
 
 **Implementation detail:** A Graph inbox adapter connects the real mailboxes to the published Copilot Studio agents. Do not describe this adapter as a native Outlook connector trigger.
 
 ## 8. The three centres respond with different trade-offs
 
-**Story:** One centre is inexpensive but busy. Another can return the car much sooner at a higher repair price. A third offers a middle option.
+**Story:** Alder is both cheapest and fastest, but proposes a new **aftermarket/non-OEM** bumper cover. Metro offers new genuine OEM parts with priority access. Riverside offers new genuine OEM parts at a lower repair price than Metro, but a later completion date.
 
 **Open and do:** Show the three `[QUOTE]` replies in the case. Open **Metro Rapid Repair** in Copilot Studio to show that it is an actual agent using its own rate and availability rules.
 
@@ -182,29 +183,31 @@ Follow **Report your incident securely**.
 
 **Feature:** Real agent-to-workflow interaction, independently configured supplier responses, actual email threads and structured quote extraction.
 
-**Say:** “The centres have different commercial offers. The system preserves their actual replies, including dates, warranty and exclusions, rather than reducing everything to an invented score.”
+**Say:** “Alder is a genuine commercial option, and its agent is honest about the parts. Aftermarket means a third-party replacement, not necessarily a counterfeit. But it is still outside our policy.”
 
 **Presenter detail:** All three centres are represented inside Caldova. No outside garage is contacted.
 
 ## 9. The agent recommends the best business outcome
 
-**Story:** The coordinator evaluates repair cost plus the cost of keeping a rental car off the road.
+**Story:** The coordinator first excludes the aftermarket offer under RP-02 and RP-05. It then evaluates repair price plus calendar downtime only for compliant offers.
 
-**Open and do:** Open **Repair options** on the incident. For the prepared Volvo case **CDI-168C31C660**, the comparison is:
+**Open and do:** Open **Repair options** on [CDI-008FC82110, Volvo EX30](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-008FC82110), deliberately left awaiting approval. The configured commercial offers are:
 
-| Centre | Repair including VAT | Calendar downtime | Total at GBP 100/day |
-| --- | ---: | ---: | ---: |
-| Alder Bodyworks | GBP 450 | 9 days | GBP 1,350 |
-| **Metro Rapid Repair** | **GBP 600** | **2 days** | **GBP 800** |
-| Riverside Auto Care | GBP 550 | 7 days | GBP 1,250 |
+| Centre | Repair including VAT | Workshop lead + duration | Parts decision |
+| --- | ---: | --- | --- |
+| Alder Bodyworks | GBP 450 | 1 + 1 business days | Excluded: new aftermarket parts, RP-02 |
+| **Metro Rapid Repair** | **GBP 600** | **2 + 1 business days** | **Eligible: new genuine OEM parts** |
+| Riverside Auto Care | GBP 550 | 3 + 2 business days | Eligible: new genuine OEM parts |
 
-Show the native agent's rationale. Move the **downtime cost** slider to zero, then back to GBP 100.
+In this prepared case, Alder returns on **6 October** for **GBP 850** including four downtime days, but is excluded. Metro returns on **7 October** for **GBP 1,100** including five downtime days. Riverside returns on **9 October** for **GBP 1,250** including seven downtime days. Metro is the best compliant choice.
+
+Show the excluded card and its clause citation. Move the **downtime cost** slider to zero: Riverside becomes the lowest-cost compliant option, never Alder. Return to GBP 100: Metro wins among compliant options. Show the original supplier declaration below the card or in the actual email.
 
 **Feature:** Policy-grounded agent recommendations; validated calculations; an interactive business trade-off.
 
-**Say:** “Metro costs GBP 150 more to repair the car, but returns it seven days earlier than the cheapest repair-price option. The overall expected saving is GBP 550.”
+**Say:** “Alder is faster and cheaper, but not eligible. Once we enforce the parts policy, the trade-off is Metro versus Riverside: GBP 50 extra repair spend for an earlier return. The slider explores costs; it cannot change the policy.”
 
-**Important:** These are the actual figures for the prepared Volvo case. New cases calculate dates and downtime from their own incident date and the centres' working-day calendars. The slider is exploration only; it does not change the recorded approval policy.
+**Important:** Calendar downtime includes weekends, while garage lead times and repair durations use business days. Use the current case's displayed dates and totals. Historical bookings keep their original recorded terms; old, unapproved quotes without parts declarations cannot be approved under the new policy.
 
 ## 10. The operations manager reviews one complete case
 
@@ -224,13 +227,13 @@ Show the native agent's rationale. Move the **downtime cost** slider to zero, th
 
 ## 11. The manager decides: accept or override
 
-**Story:** After reviewing the case, the manager makes the call. Copilot pre-selects Metro, but every quote card is selectable. The manager can keep the recommendation or pick another centre. In that case, Caldova records a reason with the approval.
+**Story:** After reviewing the case, the manager makes the call. Copilot pre-selects Metro. The manager can choose another **compliant** centre with a recorded reason, but cannot waive the OEM requirement.
 
-**Open and do:** In **Repair options**, point out that Metro is pre-selected and marked **Copilot recommends**. Optionally, click **Alder** to show the override: the button changes to **Approve & book Alder →**, and a reason box appears (e.g. “Customer needs the cheapest repair; downtime covered by a spare car”). Click back on **Metro** and click **Approve & book Metro →**. Show the status change and the new `[BOOK]` email to the chosen centre. If you override, the case shows **Operator choice**, the reason, and the operator booking email states the override.
+**Open and do:** Point out that **Alder** cannot be selected. Click **Riverside** to show the legitimate override: a reason box appears (for example, “A spare car covers the downtime; choose the lower-price compliant repair”). Click back on **Metro** and select **Approve & book Metro**. Show the new `[BOOK]` email, including the exact approved parts declaration and no-substitution condition. If you choose Riverside, the case and operator booking email record the reason.
 
 **Feature:** Explicit human approval; operator override with an audited reason; version and quote-validity checks; controlled execution. Fabric `Incidents` records `RecommendedGarage`, `ApprovedGarage`, `OverrodeRecommendation` and `OverrideReason`, so Fabric IQ can answer “Which cases did operators override, and why?”
 
-**Say:** “The agent recommends. The manager decides — and can disagree. A recommendation on a screen is not permission to commit the business.”
+**Say:** “The agent recommends. The manager decides between eligible offers. Neither a prompt nor an override reason can authorise prohibited parts.”
 
 ## 12. The garage confirms the booking
 
@@ -310,19 +313,23 @@ Then:
 
 ## 16. Ask Work IQ about the communication and reasoning
 
-**Story:** The manager needs the original work context behind a decision: what was communicated, and why the recommendation was made.
+**Story:** The manager wants to know why the fastest, cheapest garage was rejected. The answer needs both company policy and the actual supplier's words, not just the fleet's numerical data.
 
 **Open and do:** Switch to the main Microsoft 365 Copilot chat with **Work IQ enabled**, rather than staying inside the Fabric agent. Ask:
 
-> “Find the email from Caldova Claims Operations about case CDI-168C31C660. Summarize the repair recommendation, its cost trade-off, and what I need to approve. Cite the email.”
+> “Find Caldova Drive Repair Policy CD-REP-001 v1.0 and the quotation-evidence emails for case CDI-008FC82110. Which offer is fastest and cheapest? Can we approve it under the parts policy? Compare the parts declarations, exclude noncompliant offers, and recommend the best compliant option using the recorded downtime cost. Cite the Word policy clauses and the quotation emails.”
 
-Open the email citation.
+Open both the Word-document citation and the quotation-email citation. The supplier originals are preserved unchanged in the operator's **Quotation evidence - Alder Bodyworks / Metro Rapid Repair / Riverside Auto Care** emails, with original sender, timestamp and Outlook link.
+
+**Ready-to-present conversation:** In the operator's Copilot sidebar, open **Caldova Repair Policy Comparison**. This actual Work IQ response retrieved the Word policy and all three quotation-evidence emails, cited both source types, excluded Alder, and recommended Metro at GBP 1,100. The conversation ID is `da2d62d2-7c44-4d87-bad6-68aecbc648c0`.
 
 **Feature:** Work IQ retrieval and reasoning over the operator's actual Microsoft 365 work context.
 
-**Say:** “Work IQ connects the decision to the work around it. Fabric supplies the operational facts; Work IQ finds the correspondence and its context.”
+**Say:** “Work IQ connects our policy document to the actual supplier offer. It should identify Alder's aftermarket parts, cite RP-02 and RP-05, and compare only Metro and Riverside. The application enforces the same rule at approval and booking.”
 
 Use Fabric for current case state and email for the recorded communication. An older recommendation email is not proof that a case is still awaiting approval.
+
+Work IQ indexing is asynchronous. If the new document or emails are not yet retrieved, attach the existing Word file and relevant quotation emails using Copilot's file/context picker and rerun the question. Do not present a search miss or an answer without source citations as a verified policy comparison.
 
 ---
 
@@ -334,11 +341,11 @@ Use Fabric for current case state and email for the recorded communication. An o
 
 | Case | Open it for |
 | --- | --- |
-| [CDI-816DB5A515](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-816DB5A515) | Fresh customer-reporting journey |
-| [CDI-168C31C660](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-168C31C660) | Quote comparison and the live approval moment |
-| [CDI-05E0A06690](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-05E0A06690) | A completed booking with actual correspondence |
-| [CDI-BCB6A3CE7C](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-BCB6A3CE7C) | Inspection-required guardrail |
-| [CDI-447819C9E7](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-447819C9E7) | Completed Foundry-backed report, three real quotes and confirmed booking |
+| [CDI-008FC82110](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-008FC82110) | Volvo EX30; OEM policy comparison, Work IQ question and live approval moment |
+| [CDI-EDB4612D4F](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-EDB4612D4F) | Volkswagen Golf; completed genuine-OEM booking with matching approved/confirmed quotation fingerprints |
+| [CDI-E277BBAC5C](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-E277BBAC5C) | Earlier completed Polestar booking; historical terms preserved |
+
+For a fresh reporting journey, choose another vehicle without an incident. Earlier case IDs in the implementation history are archived verification records, not current prepared cases after the fleet reset.
 
 ## Product names to use accurately
 

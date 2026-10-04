@@ -17,6 +17,7 @@ from fleet.customer_agent import simulate_customer
 from fleet.domain import utc_text
 from fleet.insurance import CustomerReport, IncidentError, Incidents, insurance_config
 from fleet.repair_workflow import RepairWorkflow
+from fleet.repair_policy import policy_reference
 
 
 class ImpactRequest(BaseModel):
@@ -230,6 +231,7 @@ async def insurance_health(request):
     store, config = request.app["store"], request.app["config"]
     return web.json_response({
         "workflow": store.get("repair-worker-health"),
+        "repair_policy": policy_reference(),
         "agents": [{"name": value["name"], "id": value["id"], "schema": key} for key, value in config.get("studio_agents", {}).items()],
         "mailboxes": [{"name": "Caldova Claims", "address": insurance_config()["claims_mailbox"]}] + [
             {"name": garage["name"], "address": garage["mailbox"]} for garage in insurance_config()["garages"]

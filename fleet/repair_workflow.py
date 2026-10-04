@@ -9,8 +9,9 @@ import re
 
 from fleet.domain import utc_text
 from fleet.evidence import EvidenceService
-from fleet.insurance import Incidents, IncidentError, Quote, compare_quotes, garage_offer, insurance_config
+from fleet.insurance import Incidents, IncidentError, Quote, compare_quotes, garage_offer, insurance_config, require_approved_quote
 from fleet.mail import RepairMail, plain_body
+from fleet.repair_policy import policy_email_text, policy_reference, repair_policy
 from fleet.studio import StudioAgents
 from fleet.config import settings
 
@@ -53,7 +54,10 @@ class RepairWorkflow:
                 "vehicle": {key: case["vehicle"][key] for key in ("Make", "Model")},
                 "redacted_report": report["summary"], "customer_description": report["redacted_description"],
                 "photos": "Privacy-checked photographs are included in the attached repair brief PDF.",
-                "requested_fields": ["total price including VAT in GBP", "start date", "return-to-service date", "scope", "exclusions", "warranty"],
+                "requested_fields": ["total price including VAT in GBP", "start date", "return-to-service date", "scope", "exclusions", "warranty",
+                                     "whether replacement parts are required", "each part's component, manufacturer, origin, condition and vehicle-manufacturer approval",
+                                     "written parts declaration", "repair policy identifier and version"],
+                "repair_policy": {**repair_policy(), **policy_reference()},
                 "deadline": "Respond within the current operational review window.",
             })
             self.cases.store.put(generated_key, generated)
@@ -73,8 +77,8 @@ class RepairWorkflow:
             message = await self.mail.send(
                 key=f"{case_id}/{garage['id']}/rfq", case_id=case_id,
                 sender=self.config["claims_mailbox"], recipient=garage["mailbox"],
-                subject=f"[{case_id}] [RFQ] Cosmetic bumper repair quotation",
-                body=answer["body"] + f"\n\nCase reference: {case_id}\nQuotation only; no repair is authorised.",
+                subject=f"[{case_id}] [RFQ] Bumper repair and parts quotation",
+                body=answer["body"] + f"\n\nCase reference: {case_id}\nQuotation only; no repair is authorised.\n\n" + policy_email_text(),
                 attachment=attachment,
             )
             self.mail.record(case_id, message, "rfq_email_sent", "Claims mailbox")
@@ -106,7 +110,7 @@ class RepairWorkflow:
                 return
             key = f"{case_id}/{garage['id']}/quote-agent"
             generated = self.cases.store.get(key)
-            offer = garage_offer(garage["id"], case_id, datetime.now(UTC))
+            offer = garage_offer(garage["id"], case_id, datetime.now(UTC), vehicle=case["vehicle"])
             if generated is None:
                 if case["status"] not in {"awaiting_quotes", "requesting_quotes"}:
                     return
@@ -117,13 +121,17 @@ class RepairWorkflow:
                     "redacted_report": case["repair_report"]["summary"],
                     "incoming_email": plain_body(email["body"]["content"])[:6000],
                     "trusted_offer": offer,
+                    "repair_policy": {**repair_policy(), **policy_reference()},
                 })
                 result = generated["result"]
                 if result.get("decision") != "quote" or result.get("quote") != offer:
                     raise IncidentError(f"{garage['name']} needs further information or returned terms outside its approved rate card.")
                 self.cases.store.put(key, generated)
             result = generated["result"]
-            body = result["body"] + "\n\n" + QUOTE_START + json.dumps(result["quote"], separators=(",", ":"))
+            body = (
+                result["body"] + "\n\nSupplier's binding parts declaration:\n" + result["quote"].get("parts_statement", "Not supplied; written clarification is required.")
+                + "\n\n" + QUOTE_START + json.dumps(result["quote"], separators=(",", ":"))
+            )
             sent = await self.mail.send(
                 key=f"{case_id}/{garage['id']}/quote", case_id=case_id, sender=garage["mailbox"],
                 recipient=self.config["claims_mailbox"], subject=f"[{case_id}] [QUOTE] {garage['name']}",
@@ -138,24 +146,26 @@ class RepairWorkflow:
                 return
             key = f"{case_id}/{garage['id']}/booking-agent"
             generated = self.cases.store.get(key)
-            accepted = case["quotes"][garage["id"]]
+            accepted = require_approved_quote(case)
+            commitment = self.booking_commitment(case)
             if generated is None:
                 generated = await self.studio.invoke(garage["agent_schema"], {
                     "operation": "booking", "case_id": case_id, "garage_id": garage["id"],
                     "approved": True, "operator_approval": case["approval"], "accepted_quote": accepted,
+                    "booking_commitment": commitment, "repair_policy": case["approval"]["policy"],
                     "incoming_email": plain_body(email["body"]["content"])[:6000],
                 })
                 reply = generated["result"]
-                if reply.get("decision") != "confirmed" or reply.get("case_id") != case_id or reply.get("garage_id") != garage["id"] or reply.get("ready_by") != accepted["ready_by"]:
+                if reply.get("decision") != "confirmed" or any(reply.get(key) != value for key, value in commitment.items()):
                     raise IncidentError("The garage did not confirm the approved terms.")
                 self.cases.store.put(key, generated)
             result = generated["result"]
             sent = await self.mail.send(
                 key=f"{case_id}/{garage['id']}/booked", case_id=case_id, sender=garage["mailbox"],
                 recipient=self.config["claims_mailbox"], subject=f"[{case_id}] [BOOKED] {garage['name']}",
-                body=result["body"] + "\n\n" + BOOKING_START + json.dumps({
-                    "case_id": case_id, "garage_id": garage["id"], "ready_by": accepted["ready_by"],
-                }), reply_to_id=email["id"],
+                body=result["body"] + "\n\nConfirmed parts commitment:\n" + accepted["parts_statement"]
+                + "\nNo parts substitution or additional work is authorised without a compliant revised quotation and operator approval.\n\n"
+                + BOOKING_START + json.dumps(commitment), reply_to_id=email["id"],
             )
             self.mail.record(case_id, sent, "garage_booking_confirmed", generated["agent"]["name"])
 
@@ -179,7 +189,7 @@ class RepairWorkflow:
         if "[QUOTE]" in email["subject"]:
             if case["quotes"].get(garage["id"], {}).get("email_id") == email["id"]:
                 return
-            if case["status"] not in {"requesting_quotes", "awaiting_quotes", "recommendation_ready"}:
+            if case["status"] not in {"requesting_quotes", "awaiting_quotes", "recommendation_ready", "quote_review_required"}:
                 return
             payload = extract_payload(body, QUOTE_START)
             trusted = self.cases.store.get(f"{case_id}/{garage['id']}/quote-agent")
@@ -196,10 +206,19 @@ class RepairWorkflow:
             payload = extract_payload(body, BOOKING_START)
             if case["status"] != "booking_requested" or case["approval"]["garage_id"] != garage["id"]:
                 return
-            if payload != {"case_id": case_id, "garage_id": garage["id"], "ready_by": case["quotes"][garage["id"]]["ready_by"]}:
+            require_approved_quote(case)
+            if payload != self.booking_commitment(case):
                 raise IncidentError("Booking confirmation differs from the approved terms.")
+            trusted = self.cases.store.get(f"{case_id}/{garage['id']}/booking-agent")
+            if not trusted or trusted["result"].get("decision") != "confirmed" or any(
+                trusted["result"].get(key) != value for key, value in payload.items()
+            ):
+                raise IncidentError("The confirmation does not match a verified native-agent booking commitment.")
             message = self.mail.correspondence(email, "inbound", sender, self.config["claims_mailbox"])
             def booked(current):
+                require_approved_quote(current)
+                if current["status"] != "booking_requested" or self.booking_commitment(current) != payload:
+                    raise IncidentError("The approved booking terms changed before confirmation.")
                 current["status"] = "booked"
                 current["booking"] = {**payload, "confirmed_at": utc_text(datetime.now(UTC)), "email_id": email["id"]}
                 current["correspondence"].append(message)
@@ -209,35 +228,56 @@ class RepairWorkflow:
     async def recommend(self, case_id: str) -> None:
         case = self.cases.get(case_id)
         recommendation = compare_quotes(list(case["quotes"].values()), case["created_at"])
+        if not recommendation["garage_id"]:
+            raise IncidentError(recommendation["rationale"])
         result = await self.studio.invoke("cdv_repaircoordinator", {
             "operation": "recommend", "case_id": case_id, "quotations": recommendation["quotes"],
             "policy": recommendation["policy"], "human_approval_required": True,
+            "repair_policy_clauses": repair_policy()["clauses"],
+            "eligible_garage_ids": recommendation["eligible_garage_ids"],
         })
         if result["result"].get("garage_id") != recommendation["garage_id"] or result["result"].get("requires_approval") is not True:
             raise IncidentError("The AI recommendation did not satisfy the explicit repair policy.")
+        expected_exclusions = sorted(item["garage_id"] for item in recommendation["quotes"] if not item["compliance"]["eligible"])
+        if (result["result"].get("policy_id") != recommendation["policy"]["id"]
+                or result["result"].get("policy_version") != recommendation["policy"]["version"]
+                or sorted(result["result"].get("excluded_garage_ids", [])) != expected_exclusions):
+            raise IncidentError("The coordinator did not acknowledge the policy and excluded quotations.")
         def prepared(current):
             if current["status"] != "recommendation_ready":
                 raise IncidentError("The case changed during recommendation generation.")
-            current["recommendation"]["agent"] = result["agent"]
-            current["recommendation"]["ai_summary"] = result["result"]
+            current["recommendation"] = {**recommendation, "agent": result["agent"], "ai_summary": result["result"]}
             return {"garage_id": recommendation["garage_id"], "agent": result["agent"]}
-        self.cases.change(case_id, "recommendation_prepared", "Copilot Studio", prepared)
+        self.cases.change(case_id, "recommendation_prepared", "Copilot Studio", prepared, version=case["version"])
+
+    @staticmethod
+    def booking_commitment(case: dict) -> dict:
+        approval = case["approval"]
+        quote = case["quotes"][approval["garage_id"]]
+        return {
+            "case_id": case["id"], "garage_id": approval["garage_id"], "ready_by": quote["ready_by"],
+            "quote_sha256": approval["quote_sha256"], "policy_id": approval["policy"]["id"],
+            "policy_version": approval["policy"]["version"],
+        }
 
     async def book(self, case_id: str) -> None:
         case = self.cases.get(case_id)
         if case["status"] != "approved":
             raise IncidentError("Operator approval is required before booking.")
         current_choice = compare_quotes(list(case["quotes"].values()), case["created_at"])
-        if current_choice["garage_id"] != case["approval"].get("recommended_garage_id", case["approval"]["garage_id"]):
+        if (current_choice["garage_id"] != case["approval"].get("recommended_garage_id", case["approval"]["garage_id"])
+                or current_choice["quote_set_sha256"] != case["approval"].get("quote_set_sha256")):
             raise IncidentError("The quotations changed after approval. Review refreshed quotations.")
         garage = next(item for item in self.config["garages"] if item["id"] == case["approval"]["garage_id"])
-        offer = case["quotes"][garage["id"]]
+        offer = require_approved_quote(case)
         body = (
             f"Caldova approves your quotation for {case_id}.\n"
             f"Approved total including VAT: GBP {offer['amount_gbp']}.\n"
             f"Start: {offer['available_from']}. Expected return: {offer['ready_by']}.\n"
             f"Scope: {offer['scope']}\nExclusions: {offer['exclusions']}\n"
-            "Please confirm the booking on these terms. Additional work requires further approval."
+            f"Approved parts declaration: {offer['parts_statement']}\n"
+            f"Policy: {case['approval']['policy']['id']} v{case['approval']['policy']['version']} (RP-02, RP-07).\n"
+            "Please confirm the booking on these exact terms. No parts substitution or additional work is authorised without a compliant revised quotation and further operator approval."
         )
         sent = await self.mail.send(
             key=f"{case_id}/{garage['id']}/booking-request", case_id=case_id,
@@ -260,13 +300,35 @@ class RepairWorkflow:
         if receipt and receipt["state"] == "sent":
             return
         config = settings()
-        heading = "Repair booking confirmed" if booked else "Repair recommendation ready for your approval"
+        ready = bool(recommendation["garage_id"])
+        heading = "Repair booking confirmed" if booked else "Repair recommendation ready for your approval" if ready else "Repair quotations require policy review"
         rows = recommendation["quotes"]
         comparison = "\n".join(
             f"- {item['garage_name']}: repair GBP {item['amount_gbp']}; available {item['available_from']}; "
-            f"return {item['ready_by']}; {item['downtime_days']} calendar downtime days; total expected GBP {item['total_expected_gbp']}."
+            f"return {item['ready_by']}; {item['downtime_days']} calendar downtime days; total expected GBP {item['total_expected_gbp']}.\n"
+            f"  Parts decision: {item.get('compliance', {}).get('status', 'not assessed under current policy')}.\n"
+            f"  Supplier declaration: {item.get('parts_statement', 'Not recorded in this historical quotation.')}\n"
+            + "".join(f"  {finding['clause']}: {finding['reason']}\n" for finding in item.get("compliance", {}).get("findings", []))
             for item in rows
         )
+        if recommendation["policy"].get("id"):
+            for item in rows:
+                original = next((message for message in case["correspondence"] if message["id"] == item["email_id"]), None)
+                if not original:
+                    raise IncidentError("The original quotation email is missing from the decision evidence.")
+                copy = await self.mail.send(
+                    key=f"{case_id}/{item['garage_id']}/operator-quote", case_id=case_id,
+                    sender=self.config["claims_mailbox"], recipient=config["report_recipient"],
+                    subject=f"[{case_id}] Quotation evidence - {item['garage_name']}",
+                    body=(
+                        f"Original quotation received from {original['from']} at {original['at']}.\n"
+                        f"Original subject: {original['subject']}\nOriginal Outlook message: {original['web_url']}\n"
+                        f"Policy: {recommendation['policy']['id']} v{recommendation['policy']['version']}\n"
+                        f"Word policy: {recommendation['policy']['document_url']}\n\n"
+                        "The following is the original supplier response, retained unchanged:\n\n" + original["body"]
+                    ),
+                )
+                self.mail.record(case_id, copy, "quotation_evidence_shared", "Claims coordination")
         approval = case.get("approval") or {}
         chosen = next((item["garage_name"] for item in rows if item["garage_id"] == approval.get("garage_id")), approval.get("garage_id", ""))
         decision = (
@@ -280,10 +342,14 @@ class RepairWorkflow:
             f"{recommendation['rationale']}\n\n"
             f"Quotation comparison at GBP {recommendation['policy']['downtime_cost_per_day']} per downtime day:\n{comparison}\n\n"
             f"{decision}"
-            f"{'The selected garage has confirmed the approved booking.' if booked else 'No booking has been made. Open the case, keep the recommended repair centre or choose another, and select Approve & book only after reviewing the evidence and quotes.'}\n\n"
-            f"Case dashboard: {config['appUrl']}/#incidents?case={case_id}\n"
+            f"{'The selected garage has confirmed the approved booking.' if booked else 'No booking has been made. Only compliant quotations may be approved; a reason cannot override prohibited parts.'}\n\n"
+            + (f"Controlled Word policy: {recommendation['policy']['document_url']}\n"
+               f"{recommendation['policy']['id']} v{recommendation['policy']['version']}: RP-02 requires new genuine OEM; RP-03 requires explicit evidence; RP-05 excludes prohibited parts before ranking; RP-07 requires human approval.\n\n"
+               if recommendation["policy"].get("id") else "")
+            + f"Case dashboard: {config['appUrl']}/#incidents?case={case_id}\n"
             f"Sources: Fabric vehicle telemetry; the customer report; the three original quotation replies; "
-            f"Copilot Studio agent {recommendation['agent']['name']} ({recommendation['agent']['id']})."
+            + (f"Copilot Studio agent {recommendation['agent']['name']} ({recommendation['agent']['id']})."
+               if recommendation.get("agent") else "deterministic repair-policy review. No eligible offer is recommended.")
         )
         message = await self.mail.send(
             key=key, case_id=case_id, sender=self.config["claims_mailbox"],
@@ -302,6 +368,8 @@ class RepairWorkflow:
                     elif case["status"] == "recommendation_ready" and not case["recommendation"].get("agent"):
                         await self.recommend(case["id"])
                     elif case["status"] == "recommendation_ready":
+                        await self.notify_operator(case["id"], booked=False)
+                    elif case["status"] == "quote_review_required":
                         await self.notify_operator(case["id"], booked=False)
                     elif case["status"] == "approved":
                         await self.book(case["id"])

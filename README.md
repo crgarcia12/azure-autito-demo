@@ -46,6 +46,12 @@ Evidence processing uses Foundry resource **caldovadrive08667473-foundry**, proj
 
 The operator can inspect the evidence, original correspondence and quote comparison. **Approve & book** is required before a booking request is sent. The garage's actual confirmation changes the state to booked. A cost-sensitivity slider illustrates why an earlier repair can be cheaper overall without changing the approval policy.
 
+The [Word repair policy](policies/Caldova-Repair-Policy.docx), **CD-REP-001 v1.0**, requires **new genuine OEM replacement parts**. Alder offers the cheapest, earliest repair with new aftermarket parts; its offer remains visible but cannot be selected. Metro and Riverside offer new genuine OEM parts, and only compliant offers participate in the cost comparison. Missing declarations require clarification. An operator may choose another compliant offer with a reason, but cannot override the parts requirement. The approved quotation and policy are fingerprinted and checked again before booking.
+
+The controlled document is published in the Caldova operator's **OneDrive for Business (SharePoint-backed)** under **Caldova Drive / Policies**; the dashboard links to the live Word document. Its actual URL, item ID and hashes are in `policies\publication.json`. The native garage replies, unchanged quotation-evidence copies, and decision packet are delivered to the operator's real mailbox, so main Microsoft 365 Copilot with **Work IQ** can compare the Word policy with the supplier statements and cite both. This is separate from the Fabric data agent's Lakehouse queries.
+
+Edit `policies\repair-policy.json` to change the controlled clauses, then run `.\.venv\Scripts\python.exe -m tools.publish_repair_policy`, publish the affected agents with `tools\publish_agents.ps1`, and deploy the app. Publication uses the existing, approved Caldova Content Studio delegated account, not tenant-wide app-only file access. A changed policy source without a matching published Word version is rejected.
+
 The native agents are integrated through a Graph inbox adapter and Direct Line. Native Outlook connector triggers are not claimed. The operator receives real decision packets that Work IQ in Microsoft 365 Copilot can retrieve and cite; this work-context retrieval was verified separately from the Fabric live-data query.
 
 ## Architecture

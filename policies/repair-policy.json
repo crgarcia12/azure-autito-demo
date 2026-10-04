@@ -1,0 +1,55 @@
+{
+  "id": "CD-REP-001",
+  "title": "Caldova Drive Repair Policy",
+  "version": "1.0",
+  "effective_date": "2026-10-02",
+  "owner": "Caldova Claims Operations",
+  "currency": "GBP",
+  "downtime_cost_per_day": 100,
+  "maximum_repair_quote": 2500,
+  "replacement_parts_origin": "genuine_oem",
+  "replacement_parts_condition": "new",
+  "allow_repair_without_replacement": true,
+  "clauses": [
+    {
+      "id": "RP-01",
+      "title": "Scope and authority",
+      "text": "This policy applies to every new repair approval and booking for a Caldova-insured rental vehicle. Completed historical bookings retain their original decision records. Safety, roadworthiness, liability and insurance coverage require the appropriate assessment; a photograph or quotation does not establish them."
+    },
+    {
+      "id": "RP-02",
+      "title": "New genuine OEM replacement parts only",
+      "text": "All replacement parts must be new, genuine Original Equipment Manufacturer (OEM) parts approved by the vehicle manufacturer for the specific vehicle. Aftermarket or non-OEM parts, used or salvaged parts, refurbished parts and remanufactured parts are not permitted. Descriptions such as OEM-equivalent, matching quality, compatible, replica or pattern part do not establish genuine OEM status. Aftermarket does not necessarily mean counterfeit; it means a third-party replacement rather than an accepted genuine manufacturer part."
+    },
+    {
+      "id": "RP-03",
+      "title": "Required quotation evidence",
+      "text": "Each repair centre must explicitly state whether replacement parts are required. For every replacement part, the quotation must identify the component, manufacturer or genuine manufacturer supply, origin, new condition, and confirmation of approval for the vehicle. A general warranty, low price or short lead time is not evidence of parts compliance. Missing or ambiguous parts information requires written clarification before that quotation can be approved. Do not infer compliance from a garage being on the approved supplier list."
+    },
+    {
+      "id": "RP-04",
+      "title": "Repairing an existing component",
+      "text": "Repairing or refinishing the component already fitted to the vehicle is permitted when the quotation explicitly confirms that no replacement parts will be fitted and that physical inspection will establish repair suitability. This is not permission to install a used replacement component. If inspection changes the scope to replacement, a revised quotation meeting RP-02 and RP-03 is required before the additional work is authorised."
+    },
+    {
+      "id": "RP-05",
+      "title": "Compliance before cost and availability",
+      "text": "Classify every quotation as compliant, noncompliant, or requiring clarification, with the supporting supplier statement and policy clause recorded. Exclude noncompliant quotations from recommendation and booking, even when they are both the fastest and cheapest. Preserve excluded offers in the case for transparency. Unknown parts provenance is not compliant. If there is no eligible quotation, obtain a compliant or clarified quotation; do not select a noncompliant default."
+    },
+    {
+      "id": "RP-06",
+      "title": "Compare eligible repair options",
+      "text": "After compliance is established, compare the total repair price including VAT and the vehicle's expected return-to-service date. Calculate total expected cost as repair price plus calendar days of downtime multiplied by the recorded downtime rate. The current operating assumptions are GBP 100 per downtime day and a GBP 2,500 repair-quote limit. Record the assumptions, incident date, quote validity and comparison. A workshop start date alone is not a return-to-service commitment."
+    },
+    {
+      "id": "RP-07",
+      "title": "Human approval and overrides",
+      "text": "An authorised operator must approve a current recommendation before the booking request is sent. The operator may choose a different eligible quotation with a recorded reason, but cannot waive the genuine-new-OEM requirement by using an override. Revalidate the chosen quotation, parts evidence, policy version and validity immediately before dispatch. Garage confirmation is a separate event: only an actual confirmation of the approved terms makes the case booked."
+    },
+    {
+      "id": "RP-08",
+      "title": "Evidence, privacy and traceability",
+      "text": "Retain the customer report, protected original photographs, privacy-processed repair brief, quotation requests, original responses, parts declarations, compliance findings, policy identifier/version, recommendation, approval and confirmation. Share only the redacted repair brief with the approved repair network. Every decision must identify its policy clause and source quotation. AI output is a recommendation and cannot override this policy."
+    }
+  ]
+}

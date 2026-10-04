@@ -34,23 +34,23 @@ Start at <https://caldovadrive08667473.azurewebsites.net/#incidents>. Sign in wi
 
 | Ready-to-present case | Vehicle | State | What to demonstrate |
 | --- | --- | --- | --- |
-| `CDI-168C31C660` | CD-002, Volvo EX30 | Recommendation ready | Three actual quotes, the native agent rationale, the downtime sensitivity slider and **Approve & book**. This case is deliberately left unapproved. |
-| `CDI-05E0A06690` | CD-001, Polestar 2 | Booked | Completed end-to-end case, actual approval by the operator, original correspondence and confirmed return date. |
-| `CDI-BCB6A3CE7C` | CD-003, Volkswagen Golf | Evidence review required | The real model found the wider damage photo warranted inspection. No RFQ or quotation was fabricated. |
-| `CDI-816DB5A515` | CD-004, BMW 330e | Awaiting customer report | A fresh incident opened by the native Fabric pipeline in 91.8 seconds. Use its phone-message link for a live customer submission. |
-| `CDI-A14808C265` | CD-005, Kia EV6 | Booked | Final secured-channel end-to-end verification, completed in 238.14 seconds. |
+| `CDI-008FC82110` | CD-002, Volvo EX30 | Recommendation ready | OEM policy; fastest/cheapest aftermarket offer excluded; real quotation emails; compliant-only slider and **Approve & book**. Deliberately unapproved. |
+| `CDI-EDB4612D4F` | CD-003, Volkswagen Golf | Booked | New genuine OEM approval, actual native garage confirmation, identical approved and confirmed quotation hashes. |
+| `CDI-E277BBAC5C` | CD-001, Polestar 2 | Booked | Prior completed booking; original historical terms preserved. |
 
-The selected Metro option in the verified cases is **GBP 600 repair + two calendar downtime days at GBP 100 = GBP 800**. Alder quotes GBP 450 but returns the car later, giving GBP 1,350 total expected cost; Riverside gives GBP 1,250. The additional GBP 150 repair spend versus Alder avoids seven downtime days and reduces expected total cost by GBP 550. Exact dates change with the live business-day calendar when a new case is created.
+For `CDI-008FC82110`, **Alder is cheapest and fastest: GBP 450 repair, return 6 October, GBP 850 including downtime. It is excluded because it proposes aftermarket parts.** Metro offers new genuine OEM parts: GBP 600 repair, return 7 October, GBP 1,100 total. Riverside is also compliant: GBP 550 repair, return 9 October, GBP 1,250 total. Metro saves GBP 150 versus the lower-price compliant option, Riverside. At zero downtime cost the slider selects Riverside, never Alder. Exact dates change with the live business-day calendar.
+
+Earlier case IDs and cost comparisons below are historical verification records. The fleet was reset before the OEM-policy extension; use the current cases above for the presentation.
 
 **Real versus generated:** telemetry, rental identities and garage rate/capacity data are generated for the demonstration. The Fabric rule, pipeline, data agent, four Copilot Studio agents, image-model calls, emails, PDF generation, authentication, uploads and approval processing are real. The phone notification is an in-app preview, not a paid SMS.
 
-**Validation:** 62 unit/API tests pass after the Foundry integration. The earlier 51-test suite also passed with cloud configuration and credentials deliberately unavailable. A separate hosted browser run uses a legitimate user-delegated Caldova token and checks the deployed application, all 40 map markers, quote comparison, emails, mobile layout and access boundaries. The core real-service and hosted end-to-end runs are recorded below.
+**Validation:** 89 unit/API tests pass after the OEM-policy extension, including forbidden parts, missing declarations, no-replacement repairs, per-part checks, invalid overrides, stale booking terms, historical-record preservation, actual Word content and the exact published document hash. The earlier 51-test suite also passed with cloud configuration and credentials deliberately unavailable. A separate hosted browser run uses a legitimate user-delegated Caldova token and checks the deployed application, all 40 map markers, quote comparison, emails, mobile layout and access boundaries. The core real-service and hosted end-to-end runs are recorded below.
 
-**Microsoft 365:** in the same Caldova profile, open [Microsoft 365 Copilot](https://m365.cloud.microsoft/chat/?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572), select **Agents > Caldova Fleet IQ** (created by Fabric Data Agent), and ask which repairs await approval. A real Microsoft 365 conversation returned `CDI-168C31C660` and `metro` from the live data after the capacity was resumed.
+**Microsoft 365:** in the same Caldova profile, open [Microsoft 365 Copilot](https://m365.cloud.microsoft/chat/?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572), select **Agents > Caldova Fleet IQ** (created by Fabric Data Agent), and ask about case `CDI-008FC82110`. The published native Fabric agent was verified against the actual new `RepairQuotes` fields: Alder is noncompliant under RP-02, Metro and Riverside are eligible, and the policy is CD-REP-001 v1.0.
 
-**Work IQ:** switch to the main Copilot chat with Work IQ enabled and ask: “Find the email from Caldova Claims Operations about case CDI-168C31C660. Summarize the repair recommendation, its cost trade-off, and what I need to approve. Cite the email.” This was tested: Copilot found the actual delivered email, cited its subject, and explained the GBP 800 Metro recommendation.
+**Work IQ:** in main Copilot with Work IQ enabled, open the actual saved conversation **Caldova Repair Policy Comparison** (`da2d62d2-7c44-4d87-bad6-68aecbc648c0`). It retrieved `Caldova-Repair-Policy.docx` and all three quotation-evidence emails for `CDI-008FC82110`, cited the Word clauses and emails, excluded the fastest/cheapest aftermarket offer, and recommended Metro at GBP 1,100. This was verified in the real Caldova browser conversation, not inferred from file publication or a Graph email adapter.
 
-**Current build verified:** `c7b7fa81d26b90fb`, including the Foundry cutover. The hosted worker is running, the prepared case states remain persisted, the four Copilot Studio channels use protected credentials, and evidence processing uses the real Foundry project agent. The earlier overnight build was `ba5a179f9713fc84`.
+**Current build verified:** `f5af8dec36346872`, including the genuine-OEM policy, parts-aware quote cards and booking gates. The hosted worker is running, the prepared case states remain persisted, all four Copilot Studio channels reject anonymous access, and evidence processing uses the real Foundry project agent. The earlier Foundry cutover build was `c7b7fa81d26b90fb`; the overnight build was `ba5a179f9713fc84`.
 
 ## Status at the start of autonomous implementation
 
@@ -77,7 +77,7 @@ The selected Metro option in the verified cases is **GBP 600 repair + two calend
 6. Show the repair brief and its source evidence. Photo observations are not a definitive damage diagnosis.
 7. Send actual RFQ emails to three dedicated Caldova garage mailboxes.
 8. Show the inbox broker invoking the actual published Copilot Studio agents for those messages. Each returns its own validated quote using its rate/availability rules. The replies are sent through the corresponding real Caldova shared mailbox.
-9. Compare total expected cost: quoted repair cost plus the configured cost of vehicle downtime. The cheapest repair is not necessarily the cheapest outcome.
+9. Apply the new genuine OEM parts policy first, retaining but excluding the fastest/cheapest aftermarket offer. Compare repair plus calendar downtime only for the compliant alternatives.
 10. Open the vehicle marked **Repair recommendation ready**. Inspect photos, customer explanation, redacted report, original emails, replies, comparison and rationale.
 11. Click **Approve & book**. Only then is the booking request sent. Garage confirmation changes the case to booked and updates the vehicle's expected availability.
 12. Ask the fleet copilot about affected cars, outstanding approvals and yesterday's mileage, with the reporting period and source visible.
@@ -270,13 +270,13 @@ Items in **Caldova Drive - Fleet Intelligence**, in data-flow order:
 ## Presenting an eight-minute version
 
 1. **Fleet overview, 45 seconds:** show 40 cars and the vehicles needing attention.
-2. **Signal to case, 60–90 seconds:** use a vehicle without an active case and select **Send impact telemetry**, or open the fresh BMW case to avoid waiting during a short presentation. Show the Fabric source event and pipeline provenance.
+2. **Signal to case, 60–90 seconds:** use a vehicle without an active case and select **Send impact telemetry**, or show the pipeline provenance of prepared case `CDI-008FC82110`.
 3. **Customer intake, 60 seconds:** open the phone-message preview, follow the secure link, upload `static\demo-assets\bumper-dent.jpg`, enter a brief account and submit.
-4. **Evidence and correspondence, 60 seconds:** show the protected original, redacted copy/PDF, and original quotation requests and replies. For a time-bounded presentation, use the already prepared Volvo case.
-5. **Business decision, 60 seconds:** compare GBP 450/600/550 repair quotes and their different completion dates. Move the downtime slider to zero and back to GBP 100 to explain why the recommendation changes. The actual approval policy is not changed.
-6. **Approval, 30–60 seconds:** click **Approve & book** on the Volvo case. Wait for the real Metro confirmation and show the distinct approval and confirmation events.
-7. **IQ context, 60 seconds:** ask `Caldova Fleet IQ` for live approval/booking status, then use main Copilot with Work IQ to find the claims decision email and cite it. Use live Fabric facts for current status and email context for the recorded communication.
-8. **Trust boundary, 30 seconds:** open the Golf case. Its broader damage image requires inspection and has **zero quotation emails**, demonstrating that uncertain evidence does not silently become an approved repair.
+4. **Evidence and correspondence, 60 seconds:** show the protected original, redacted PDF and actual replies in the prepared Volvo case. Open the Word policy's RP-02, RP-03 and RP-05 clauses.
+5. **Business decision, 60 seconds:** Alder is GBP 450 and returns first, but its new aftermarket parts make it ineligible. At GBP 0/day the compliant-only slider selects Riverside; at GBP 100/day it selects Metro. Alder never becomes selectable.
+6. **Approval, 30–60 seconds:** show the valid Riverside override with a reason, then return to Metro. Use **Approve & book** only when ready to consume the prepared case; the separately completed `CDI-EDB4612D4F` already proves the real confirmation path.
+7. **IQ context, 60 seconds:** use main Copilot's saved **Caldova Repair Policy Comparison** chat. Open its Word-policy and supplier-email citations, then ask Fabric IQ for live quote eligibility.
+8. **Trust boundary, 30 seconds:** explain that the API also rejected an attempted Alder override with a reason. A cheaper or faster prohibited part is not an exception, and the same chosen quote/policy fingerprints are rechecked for booking.
 
 ## Verification artifacts
 
@@ -291,6 +291,10 @@ All artifacts below are local and ignored by Git; credentials and access links m
 - `.local\customer-report-mobile.png` and `.local\customer-report-received.png`: real hosted mobile intake.
 - `.local\hosted-incident-mobile.png`: responsive operator view.
 - `.local\build-id.txt`: expected deployed source/configuration hash.
+- `.local\oem-ready-case.json`: current unapproved OEM-policy case and rejected aftermarket-override proof.
+- `.local\fabric-oem-answer.json`: actual native Fabric answer from the new parts-compliance columns.
+- `.local\oem-workiq-browser.txt`: actual main Microsoft 365 Copilot answer, including Word and original-email citation labels.
+- `.local\oem-workiq-comparison.png`: real Caldova Work IQ conversation screenshot.
 
 The recurring CLI continuation schedule was stopped after the completed demo, final verification and runbook were persisted. The Azure application and its morning automation continue independently.
 
@@ -337,3 +341,24 @@ Image sources and licensing are recorded in `static\demo-assets\attribution.txt`
 - **Hosted Foundry-backed workflow passed:** case `CDI-447819C9E7`, CD-006, reached `booked` after three real Foundry responses, all real Copilot Studio quotation agents, actual email, operator approval and Metro confirmation. Measured time from continuing the detected case: **173.41 seconds**.
 - Only after that verification, `tools\retire_openai.py` removed the superseded `caldovadrive08667473-ai` account and cleared obsolete endpoint settings. All operational case data and the new Foundry resource were retained.
 - `storyline.md` provides the requested chronological story, what to open, feature names and presenter narration for all 15 steps.
+
+## Genuine OEM policy extension, 2 October 2026
+
+- **Controlled policy:** `policies\repair-policy.json` is the versioned clause source; `policies\Caldova-Repair-Policy.docx` is the generated Word document. `policies\publication.json` records the actual Microsoft 365 item, URL, ETag and source/document SHA-256 values. A source change without corresponding publication is rejected.
+- **Publication:** the Word file is in the Caldova operator's OneDrive for Business library, **Caldova Drive / Policies**. The root communication site had no accessible document library; the existing operator-only Content Studio Files.ReadWrite consent was used instead. Downloaded cloud bytes exactly matched the local Word file. No anonymous sharing or tenant-wide application file permissions were added.
+- **Rules:** RP-02 requires new genuine OEM replacements; RP-03 requires explicit component, manufacturer, origin, condition and vehicle approval; RP-04 permits genuine repair without replacement; RP-05 excludes noncompliant quotes before ranking; RP-07 prohibits policy-waiving overrides and requires human approval. Used, refurbished and remanufactured replacements are also blocked.
+- **Supplier story:** Alder discloses new Northline Components aftermarket parts, with the earliest return and lowest price. Metro and Riverside explicitly declare new genuine vehicle-manufacturer OEM parts. The garage agents must copy the trusted structured offer unchanged, including the honest noncompliance declaration.
+- **Deterministic enforcement:** every component is evaluated. Missing fields require clarification; if no offer qualifies, `quote_review_required` has no default winner. Approval verifies the quote set and current policy; the chosen quotation's fingerprint and policy hash are retained. Dispatch and actual garage confirmation revalidate the commitment. Completed historical cases retain their original terms.
+- **Real agents and email:** all four agents were pushed and published with explicit success confirmations. Each anonymous token endpoint still returns HTTP 403. Requests include the policy; actual supplier replies include binding parts declarations. The operator receives three unchanged quotation-evidence copies with original sender/date/Outlook link, plus the policy-linked decision packet.
+- **Fabric:** `RepairQuotes` now includes `PartsItems`, `PartsDeclaration`, `PartsComplianceStatus`, `PartsEligible`, `PartsComplianceReasons`, policy identity/version/document link and source-email references. SQL metadata was refreshed, the actual native source rediscovered and published, and the ontology/graph updated without changing existing keys or relationships. The data agent still queries LakehouseTables, not a direct ontology source.
+- **Hosted ready case:** `CDI-008FC82110`, CD-002, reached a genuine policy-aware recommendation in **210.44 seconds**, via Fabric pipeline `ace6ac9d-72e9-4a1d-babc-1961826e7823`. The API rejected selecting Alder even with an override reason. The case remains unapproved.
+- **Hosted booking case:** `CDI-EDB4612D4F`, CD-003, completed in **289.06 seconds**, via pipeline `1d7632d7-3571-45d1-80f4-dcf4913c913d`. Foundry evidence, all three Studio suppliers, the coordinator, real email, human approval and Metro confirmation were exercised. Approved and confirmed quotation hashes both equal `59b52f9498efb028089d94022b3e12d6a56d8f9f3a4f979fac9b2a8309cced45`.
+- **Work IQ:** the actual main Copilot conversation found the Word document and all three relevant supplier-evidence emails, with citations. It independently produced the correct GBP 850 excluded Alder / GBP 1,100 eligible Metro / GBP 1,250 eligible Riverside comparison and cited RP-02, RP-03, RP-05, RP-06 and RP-07.
+- **Verification access:** an optional standalone Work IQ CLI hit its Windows broker-window limitation, and a temporary operator-only Copilot API consent probe required interactive sign-in. Its extra delegated scopes were removed; the exact original operator grant was restored and verified. No permissions were added to the other content authors or application mailbox grants. The successful proof uses the existing Caldova Copilot browser session.
+- **Regression evidence:** the full Python suite, real hosted browser controls, real prepared and booked cases, native data-agent query, exact published Word bytes and actual Work IQ cross-source reasoning were exercised. Hosted browser evidence explicitly records that there is no currently prepared inspection-review case; that branch retains its unit/API coverage.
+
+To prepare another unapproved policy case:
+
+```powershell
+.\.venv\Scripts\python.exe -m tests.live_insurance --leave-ready
+```

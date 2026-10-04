@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from fleet.config import ROOT
 from fleet.domain import parse_time, utc_text
+from fleet.repair_policy import ReplacementPart, evaluate_parts, policy_reference, repair_policy
 from fleet.storage import StateStore
 
 
@@ -24,6 +25,9 @@ def insurance_config() -> dict:
     config = json.loads((ROOT / "insurance.config.json").read_text(encoding="utf-8"))
     for address in [config["claims_mailbox"], *(garage["mailbox"] for garage in config["garages"])]:
         assert_caldova_address(address)
+    policy = repair_policy()
+    if any(config[key] != policy[key] for key in ("currency", "downtime_cost_per_day", "maximum_repair_quote")):
+        raise IncidentError("The operating cost assumptions differ from the controlled repair policy.")
     return config
 
 
@@ -68,6 +72,11 @@ class Quote(BaseModel):
     warranty_months: int = Field(ge=0, le=120)
     scope: str = Field(min_length=10, max_length=1500)
     exclusions: str = Field(default="", max_length=1500)
+    replacement_parts_required: bool | None = Field(default=None, strict=True)
+    replacement_parts: list[ReplacementPart] = Field(default_factory=list, max_length=30)
+    parts_statement: str = Field(default="", max_length=2000)
+    policy_id: str = Field(default="", max_length=60)
+    policy_version: str = Field(default="", max_length=30)
     email_id: str = Field(min_length=1, max_length=1000)
     agent_id: str = Field(min_length=1, max_length=200)
 
@@ -89,7 +98,7 @@ def business_day(start: date, offset: int) -> date:
     return cursor
 
 
-def garage_offer(garage_id: str, case_id: str, received_at: datetime) -> dict:
+def garage_offer(garage_id: str, case_id: str, received_at: datetime, *, vehicle: dict | None = None) -> dict:
     config = insurance_config()
     garage = next((entry for entry in config["garages"] if entry["id"] == garage_id), None)
     if garage is None:
@@ -97,15 +106,67 @@ def garage_offer(garage_id: str, case_id: str, received_at: datetime) -> dict:
     today = received_at.astimezone(ZoneInfo("Europe/London")).date()
     starts = business_day(today, garage["lead_business_days"])
     ends = business_day(starts, garage["repair_business_days"])
+    policy = policy_reference()
+    maker = vehicle["Make"] if vehicle else "Vehicle manufacturer genuine parts supply"
+    manufacturer = garage.get("parts_manufacturer", maker)
+    genuine = garage["parts_origin"] == "genuine_oem"
+    statement = (
+        f"We propose a new genuine {maker} OEM rear bumper cover, supplied through the vehicle manufacturer's "
+        "authorised parts network and approved by the vehicle manufacturer for this vehicle. "
+        "No aftermarket, used, refurbished or remanufactured substitutions are included."
+        if genuine else
+        f"We propose a new {manufacturer} aftermarket rear bumper cover. This is a non-OEM pattern part, "
+        "not a genuine vehicle-manufacturer part. Its lower supply cost and stock availability allow our lower price and earlier return. "
+        "This offer does not meet Caldova's new genuine OEM requirement; no compliant alternative is included."
+    )
     return {
         "garage_id": garage_id, "case_id": case_id,
         "amount_gbp": str(garage["bumper_cosmetic_quote"]), "currency": "GBP",
         "available_from": starts.isoformat(), "ready_by": ends.isoformat(),
         "valid_until": utc_text(received_at + timedelta(days=config["quote_validity_days"])),
         "warranty_months": garage["warranty_months"],
-        "scope": "Cosmetic bumper repair and refinishing, including materials and VAT.",
-        "exclusions": "Subject to physical inspection. Structural, sensor, electrical and concealed damage require a revised quotation.",
+        "scope": "Rear bumper cover replacement and refinishing, including the declared parts, materials, labour and VAT.",
+        "exclusions": "Subject to physical inspection and final part-number/fitment confirmation. Structural, sensor, electrical and concealed damage require a revised quotation.",
+        "replacement_parts_required": True,
+        "replacement_parts": [{
+            "component": "Rear bumper cover", "manufacturer": manufacturer,
+            "origin": garage["parts_origin"], "condition": "new", "approved_for_vehicle": genuine,
+        }],
+        "parts_statement": statement, "policy_id": policy["id"], "policy_version": policy["version"],
     }
+
+
+def quote_compliance(quote: Quote) -> dict:
+    return evaluate_parts(
+        quote.replacement_parts_required, quote.replacement_parts, quote.parts_statement,
+        policy_id=quote.policy_id, policy_version=quote.policy_version,
+    )
+
+
+def quote_fingerprint(raw: dict) -> str:
+    quote = Quote.model_validate(raw)
+    return hashlib.sha256(json.dumps(quote.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+
+
+def require_compliant_quote(raw: dict) -> dict:
+    compliance = quote_compliance(Quote.model_validate(raw))
+    if not compliance["eligible"]:
+        details = "; ".join(f"{item['clause']}: {item['reason']}" for item in compliance["findings"])
+        raise IncidentError("This quotation cannot be approved or booked. " + details)
+    return compliance
+
+
+def require_approved_quote(case: dict) -> dict:
+    approval = case.get("approval")
+    if not approval or approval["garage_id"] not in case["quotes"]:
+        raise IncidentError("A recorded operator approval for the selected quotation is required.")
+    quote = case["quotes"][approval["garage_id"]]
+    require_compliant_quote(quote)
+    if approval.get("quote_sha256") != quote_fingerprint(quote):
+        raise IncidentError("The selected quotation differs from the approved terms. Review and approve a current quotation.")
+    if approval.get("policy", {}).get("source_sha256") != policy_reference()["source_sha256"]:
+        raise IncidentError("The repair policy changed after approval. A new policy review and approval are required.")
+    return quote
 
 
 def compare_quotes(quotes: list[dict], detected_at: str, *, now: datetime | None = None) -> dict:
@@ -130,29 +191,54 @@ def compare_quotes(quotes: list[dict], detected_at: str, *, now: datetime | None
             **quote.model_dump(mode="json"), "garage_name": allowed[quote.garage_id]["name"],
             "downtime_days": days, "downtime_cost_gbp": str(downtime),
             "total_expected_gbp": str((amount + downtime).quantize(Decimal(".01"), rounding=ROUND_HALF_UP)),
+            "compliance": quote_compliance(quote),
         })
     if set(allowed) != {entry["garage_id"] for entry in costs} or len(costs) != len(allowed):
         raise IncidentError("All three distinct approved repair-centre quotes are required.")
-    costs.sort(key=lambda item: (Decimal(item["total_expected_gbp"]), item["ready_by"], item["garage_id"]))
-    winner = costs[0]
-    cheapest = min(costs, key=lambda item: Decimal(item["amount_gbp"]))
+    costs.sort(key=lambda item: (not item["compliance"]["eligible"], Decimal(item["total_expected_gbp"]), item["ready_by"], item["garage_id"]))
+    eligible = [item for item in costs if item["compliance"]["eligible"]]
+    policy = {
+        **policy_reference(), "currency": "GBP", "downtime_cost_per_day": config["downtime_cost_per_day"],
+        "maximum_repair_quote": config["maximum_repair_quote"],
+    }
+    result = {
+        "garage_id": None, "quotes": costs, "eligible_garage_ids": [item["garage_id"] for item in eligible],
+        "policy": policy, "tradeoff": None,
+        "quote_set_sha256": hashlib.sha256("".join(sorted(quote_fingerprint(raw) for raw in quotes)).encode()).hexdigest(),
+        "calculated_at": utc_text(now),
+    }
+    if not eligible:
+        result.update({
+            "status": "quote_review_required",
+            "rationale": "No compliant repair quotation is available. Obtain written parts clarification or a revised new genuine OEM offer under RP-02, RP-03 and RP-05. No booking is authorised.",
+        })
+        return result
+    winner = eligible[0]
+    cheapest = min(eligible, key=lambda item: Decimal(item["amount_gbp"]))
+    lowest_received = min(costs, key=lambda item: Decimal(item["amount_gbp"]))
     saved = Decimal(cheapest["total_expected_gbp"]) - Decimal(winner["total_expected_gbp"])
     return {
-        "garage_id": winner["garage_id"], "quotes": costs,
+        **result, "garage_id": winner["garage_id"], "status": "recommendation_ready",
         "tradeoff": {
             "lowest_repair_price_garage": cheapest["garage_name"],
             "repair_premium_gbp": str(Decimal(winner["amount_gbp"]) - Decimal(cheapest["amount_gbp"])),
             "days_saved": cheapest["downtime_days"] - winner["downtime_days"],
             "total_saving_gbp": str(saved),
+            "lowest_received_garage": lowest_received["garage_name"],
+            "lowest_received_eligible": lowest_received["compliance"]["eligible"],
         },
-        "policy": {"currency": "GBP", "downtime_cost_per_day": config["downtime_cost_per_day"], "maximum_repair_quote": config["maximum_repair_quote"]},
         "rationale": (
-            f"{winner['garage_name']} has the lowest total expected cost of GBP {Decimal(winner['total_expected_gbp']):,.2f}, "
+            f"{winner['garage_name']} has the lowest total expected cost among compliant quotations: GBP {Decimal(winner['total_expected_gbp']):,.2f}, "
             f"including GBP {Decimal(winner['amount_gbp']):,.2f} repair and {winner['downtime_days']} calendar days "
             f"of downtime at GBP {config['downtime_cost_per_day']}/day. Expected return: {winner['ready_by']}. "
-            f"Saving versus the lowest repair-price option: GBP {saved:,.2f}. Booking requires operator approval."
+            f"Saving versus the lowest compliant repair-price option: GBP {saved:,.2f}. "
+            + " ".join(
+                f"{item['garage_name']} is excluded ({item['compliance']['status']}): "
+                + "; ".join(f"{finding['clause']}: {finding['reason']}" for finding in item["compliance"]["findings"]) + "."
+                for item in costs if not item["compliance"]["eligible"]
+            )
+            + " Booking requires operator approval; RP-07 prohibits overriding parts compliance."
         ),
-        "calculated_at": utc_text(now),
     }
 
 
@@ -188,6 +274,10 @@ class Incidents:
                 garage = next(item for item in insurance_config()["garages"] if item["id"] == result["booking"]["garage_id"])
                 public["booking"] = {"garage_name": garage["name"], "ready_by": result["booking"]["ready_by"]}
             return public
+        result["repair_policy"] = policy_reference()
+        result["quote_compliance"] = {
+            garage: quote_compliance(Quote.model_validate(quote)) for garage, quote in record.get("quotes", {}).items()
+        }
         return result
 
     def _row(self, row) -> dict:
@@ -298,14 +388,14 @@ class Incidents:
         if quote.garage_id not in expected:
             raise IncidentError("Unapproved repair centre.", 403)
         def transform(record):
-            if record["status"] not in {"requesting_quotes", "awaiting_quotes", "recommendation_ready"}:
+            if record["status"] not in {"requesting_quotes", "awaiting_quotes", "recommendation_ready", "quote_review_required"}:
                 raise IncidentError("This case is not accepting repair quotations.")
             record["quotes"][quote.garage_id] = quote.model_dump(mode="json")
             if not any(message["id"] == original_email["id"] for message in record["correspondence"]):
                 record["correspondence"].append(original_email)
             if set(record["quotes"]) == expected:
                 record["recommendation"] = compare_quotes(list(record["quotes"].values()), record["created_at"])
-                record["status"] = "recommendation_ready"
+                record["status"] = record["recommendation"]["status"]
             else:
                 record["status"] = "awaiting_quotes"
             return {"garage_id": quote.garage_id, "email_id": quote.email_id, "agent_id": quote.agent_id}
@@ -320,15 +410,22 @@ class Incidents:
             recommended = record["recommendation"]["garage_id"]
             if fresh["garage_id"] != recommended:
                 raise IncidentError("The recommended option changed. Review it before approval.")
+            if fresh["quote_set_sha256"] != record["recommendation"].get("quote_set_sha256"):
+                raise IncidentError("The quotations changed or lack current parts evidence. Review refreshed quotations.")
+            if fresh["policy"]["source_sha256"] != record["recommendation"]["policy"].get("source_sha256"):
+                raise IncidentError("The repair policy changed. Review the current recommendation before approval.")
             chosen = garage_id or recommended
             if chosen not in record["quotes"]:
                 raise IncidentError("Select one of the received repair quotations.", 400)
+            require_compliant_quote(record["quotes"][chosen])
             override = chosen != recommended
             if override and not 10 <= len(reason) <= 500:
                 raise IncidentError("Explain why you are choosing a different repair centre than the recommendation.", 400)
             record["approval"] = {
                 "by": operator, "at": utc_text(datetime.now(UTC)), "garage_id": chosen,
                 "recommended_garage_id": recommended, "override": override, "reason": reason if override else "",
+                "quote_sha256": quote_fingerprint(record["quotes"][chosen]),
+                "quote_set_sha256": fresh["quote_set_sha256"], "policy": fresh["policy"],
             }
             record["status"] = "approved"
             return record["approval"]

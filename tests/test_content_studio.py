@@ -110,3 +110,19 @@ def test_uncertain_message_delivery_is_not_silently_retried(tmp_path):
     publisher.store.put(f"{publisher.run}/message", {"status": "sending"})
     with pytest.raises(RuntimeError, match="uncertain prior delivery"):
         publisher.deliver("message", lambda: pytest.fail("Must not send a duplicate."))
+
+
+def test_msal_silent_cache_hits_use_the_verified_account_identity():
+    from content_studio.auth import AuthorSession
+    session = AuthorSession.__new__(AuthorSession)
+    session.person = {"id": CONFIG["admin_object_id"]}
+    account = {"realm": CONFIG["tenant_id"], "local_account_id": CONFIG["admin_object_id"]}
+    assert session._validate({"access_token": "test-token"}, account=account) == "test-token"
+    with pytest.raises(RuntimeError, match="expected Caldova author"):
+        session._validate({"access_token": "test-token"})
+    with pytest.raises(RuntimeError, match="expected Caldova author"):
+        session._validate({"access_token": "test-token"}, account={**account, "realm": "different-tenant"})
+    with pytest.raises(RuntimeError, match="expected Caldova author"):
+        session._validate({"access_token": "test-token"}, account={**account, "local_account_id": "different-author"})
+    with pytest.raises(RuntimeError, match="expected Caldova author"):
+        session._validate({"access_token": "test-token", "id_token_claims": {"tid": "different-tenant", "oid": "different-author"}}, account=account)

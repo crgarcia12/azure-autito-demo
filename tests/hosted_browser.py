@@ -19,15 +19,16 @@ def main():
         response = client.get(origin + "/api/incidents")
         response.raise_for_status()
         cases = response.json()["cases"]
-        ready = next(case for case in cases if case["status"] == "recommendation_ready")
+        ready = next(case for case in cases if case["status"] == "recommendation_ready" and case["recommendation"]["policy"].get("id") == "CD-REP-001")
         booked = next(case for case in cases if case["status"] == "booked")
-        inspection = next(case for case in cases if case["status"] == "report_review_required")
+        inspection = next((case for case in cases if case["status"] == "report_review_required"), None)
         assert ready["recommendation"]["agent"]["id"]
         assert ready["recommendation"]["garage_id"] == "metro"
         assert len(ready["quotes"]) == 3
         assert booked["booking"]["email_id"]
-        assert inspection["repair_report"]["requires_manual_review"]
-        assert not inspection["quotes"] and not inspection["correspondence"]
+        if inspection:
+            assert inspection["repair_report"]["requires_manual_review"]
+            assert not inspection["quotes"] and not inspection["correspondence"]
         cross_origin = client.post(origin + f"/api/incidents/{ready['id']}/approve", json={"version": ready["version"]},
                                    headers={"X-Caldova-Request": "fleet-app", "Origin": "https://untrusted.example"})
         assert cross_origin.status_code == 403
@@ -55,9 +56,20 @@ def main():
         page.locator("#approve-repair").wait_for(state="visible", timeout=30000)
         assert page.locator(".quote-card").count() == 3
         assert "Metro" in page.locator(".quote-card.winner").inner_text()
+        alder = page.locator('.quote-card[data-garage="alder"]')
+        assert alder.get_attribute("aria-disabled") == "true"
+        assert alder.is_disabled()
+        assert "Noncompliant" in alder.inner_text() and "RP-02" in alder.inner_text()
+        alder.click(force=True)
+        assert "Metro" in page.locator("#approve-repair").inner_text()
+        page.locator('.quote-card[data-garage="riverside"]').click()
+        assert page.locator("#override-reason").is_visible()
+        assert "Riverside" in page.locator("#approve-repair").inner_text()
+        page.locator('.quote-card[data-garage="metro"]').click()
+        assert page.get_by_role("link", name="Open the Word repair policy").get_attribute("href").startswith("https://caldova08667473-my.sharepoint.com/")
         slider = page.locator("#downtime-sensitivity")
         slider.press("Home")
-        assert "Alder" in page.locator("#sensitivity-result").inner_text()
+        assert "Riverside" in page.locator("#sensitivity-result").inner_text()
         for _ in range(10):
             slider.press("ArrowRight")
         assert "Metro" in page.locator("#sensitivity-result").inner_text()
@@ -69,9 +81,10 @@ def main():
         page.locator(".phone-shell").wait_for(state="visible")
         assert "999" in page.locator(".sms-bubble").inner_text()
         page.screenshot(path=str(ROOT / ".local" / "hosted-phone-journey.png"), full_page=True)
-        page.locator(f'[data-case="{inspection["id"]}"]').click()
-        page.get_by_role("button", name="Request clearer evidence").wait_for(state="visible")
-        assert page.locator("#approve-repair").count() == 0
+        if inspection:
+            page.locator(f'[data-case="{inspection["id"]}"]').click()
+            page.get_by_role("button", name="Request clearer evidence").wait_for(state="visible")
+            assert page.locator("#approve-repair").count() == 0
         page.set_viewport_size({"width": 390, "height": 844})
         page.wait_for_timeout(500)
         assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
@@ -79,11 +92,12 @@ def main():
         assert not errors, errors
         context.close()
         browser.close()
-    result = {"cases": {"ready": ready["id"], "booked": booked["id"], "inspection": inspection["id"]}, "checks": [
+    result = {"cases": {"ready": ready["id"], "booked": booked["id"], "inspection": inspection["id"] if inspection else None}, "checks": [
         "authenticated hosted app", "unauthenticated access blocked", "cross-origin approval blocked",
-        "40 real map markers", "three real garage quotes", "cost trade-off slider",
-        "original email disclosure", "phone message preview", "inspection blocks approval", "mobile layout",
-    ]}
+        "40 real map markers", "three real garage quotes", "compliant-only cost trade-off slider",
+        "aftermarket card cannot be selected", "compliant operator override", "published Word policy link",
+        "original email disclosure", "phone message preview", "mobile layout",
+    ] + (["inspection blocks approval"] if inspection else [])}
     (ROOT / ".local" / "hosted-browser-results.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(json.dumps(result, ensure_ascii=True))
 

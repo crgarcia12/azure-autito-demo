@@ -60,15 +60,21 @@ class AuthorSession:
         ]
         if len(accounts) != 1:
             raise RuntimeError(f"Sign-in required: python -m content_studio login --user {self.person['userPrincipalName']}")
-        result = self.app.acquire_token_silent(SCOPES, account=accounts[0])
-        return self._validate(result)
+        account = accounts[0]
+        if account.get("realm") != CONFIG["tenant_id"] or account.get("local_account_id") != self.person["id"]:
+            raise RuntimeError("The cached identity is not the expected Caldova author. No content was sent.")
+        result = self.app.acquire_token_silent(SCOPES, account=account)
+        return self._validate(result, account=account)
 
-    def _validate(self, result: dict | None) -> str:
+    def _validate(self, result: dict | None, *, account: dict | None = None) -> str:
         if not result or "access_token" not in result:
             details = (result or {}).get("error_description", "Interactive sign-in is required.")
             raise RuntimeError(f"Caldova author authentication failed: {details}")
         claims = result.get("id_token_claims", {})
-        if claims.get("tid") != CONFIG["tenant_id"] or claims.get("oid") != self.person["id"]:
+        # MSAL cache hits may omit the ID token; the selected, protected account carries its verified identity.
+        tenant = claims.get("tid") if claims else (account or {}).get("realm")
+        author = claims.get("oid") if claims else (account or {}).get("local_account_id")
+        if tenant != CONFIG["tenant_id"] or author != self.person["id"]:
             raise RuntimeError("The signed-in identity is not the expected Caldova author. No content was sent.")
         return result["access_token"]
 
