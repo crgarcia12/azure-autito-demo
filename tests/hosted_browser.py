@@ -19,6 +19,10 @@ def main():
         response = client.get(origin + "/api/incidents")
         response.raise_for_status()
         cases = response.json()["cases"]
+        if len(cases) == 1 and cases[0]["status"] == "awaiting_report":
+            from tests.hosted_fresh_demo import main as verify_fresh
+            verify_fresh()
+            return
         ready = next(case for case in cases if case["status"] == "recommendation_ready" and case["recommendation"]["policy"].get("id") == "CD-REP-001")
         booked = next(case for case in cases if case["status"] == "booked")
         inspection = next((case for case in cases if case["status"] == "report_review_required"), None)
@@ -66,7 +70,7 @@ def main():
         assert page.locator("#override-reason").is_visible()
         assert "Riverside" in page.locator("#approve-repair").inner_text()
         page.locator('.quote-card[data-garage="metro"]').click()
-        assert page.get_by_role("link", name="Open the Word repair policy").get_attribute("href").startswith("https://caldova08667473-my.sharepoint.com/")
+        assert page.get_by_role("link", name="Open the Word policy source").get_attribute("href").startswith("https://caldova08667473-my.sharepoint.com/")
         slider = page.locator("#downtime-sensitivity")
         slider.press("Home")
         assert "Riverside" in page.locator("#sensitivity-result").inner_text()

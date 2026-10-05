@@ -95,12 +95,12 @@ class AuthorGraph:
 def word_document(document: dict, source: dict) -> bytes:
     word = Document()
     word.core_properties.title = document["title"]
-    word.core_properties.author = "Caldova Drive"
+    word.core_properties.author = "Fleet Operations"
     normal = word.styles["Normal"]
     normal.font.name = "Aptos"
     normal.font.size = Pt(11)
     word.add_heading(document["title"], 0)
-    word.add_paragraph(f"Caldova Drive | Reporting context: {source['reportDate']} | {source['reportTimezone']}")
+    word.add_paragraph(f"Fleet Operations | Reporting context: {source['reportDate']} | {source['reportTimezone']}")
     for section in document["sections"]:
         heading = word.add_heading(section["heading"], 1)
         for run in heading.runs:

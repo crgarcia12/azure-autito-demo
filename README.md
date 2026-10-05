@@ -1,16 +1,16 @@
-# Caldova Drive
+# Fleet Operations
 
-A working UK rental-fleet insurance demonstration: live telemetry and Azure Maps, Microsoft Fabric IQ digital twins, customer photo intake, real Copilot Studio repair agents, real email quotations, and operator-approved booking.
+A working UK rental-fleet insurance demonstration: live telemetry and Azure Maps, Microsoft Fabric IQ digital twins, Foundry photo analysis, Copilot Studio repair agents, real email quotations, and operator-approved booking. The application supplies the controlled policy and manages email delivery.
 
 **Start with [docs/storyline.md](docs/storyline.md)** for the chronological presenter walkthrough. [docs/implementation.md](docs/implementation.md) contains resources, verification results and operating details.
 
-For an insurance executive and technical sales audience, use [docs/mediastory.md](docs/mediastory.md): a 12-15 minute pitch with ten real screenshots, business outcomes, technical proof points and a measurable pilot close.
+For an insurance executive and technical sales audience, use [docs/mediastory.md](docs/mediastory.md): a ten-minute pitch with real screenshots, business outcomes and platform proof points. The [published media story](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/mediastory.html) is also linked from the deck's **Media story** control.
 
-**Main deck: [docs/index.html](docs/index.html).** The opening sequence is **the insurance operation → the agents we add → the product lanes**. The first slide, [docs/intro.html](docs/intro.html), is deliberately business-only: incident reported → evidence reviewed → quotes compared → manager approves → repair booked. No company or product names appear on that slide. Company names are also omitted throughout the audience-facing HTML deck; deployed resource names and agent instructions remain unchanged.
+**Main deck: [docs/index.html](docs/index.html).** The opening sequence is **the insurance operation → the business flow → the product lanes → the agents we add**. The first slide, [docs/intro.html](docs/intro.html), is deliberately business-only: incident reported → evidence reviewed → quotes compared → manager approves → repair booked. No company or product names appear on that slide. Company names are also omitted throughout the audience-facing HTML deck; deployed resource names and agent instructions remain unchanged.
 
-Arrow keys or the ‹ › buttons navigate the deck; `#1`, `#2` and `#3` open the three opening views directly. After the lanes, each agent is highlighted and its instructions shown. Microsoft IQ, personal versus always-on agents, and the flattened business flow remain at the end as supporting slides. [docs/agents.html](docs/agents.html) is the agent overview; [docs/flow.html](docs/flow.html) and [docs/flow-animated.html](docs/flow-animated.html) are standalone flow views.
+Arrow keys navigate the deck; `#1` through `#4` open the four opening views directly. The mouse becomes a glowing red laser pointer in the main deck and prompts deck; touch navigation is unchanged and the pointer is omitted when printing. After the agent overview, each agent is highlighted and its instructions shown. Microsoft IQ and personal versus always-on agents remain at the end as supporting slides. [docs/agents.html](docs/agents.html) is the agent overview; [docs/flow.html](docs/flow.html) and [docs/flow-animated.html](docs/flow-animated.html) are standalone flow views.
 
-Regenerate the main deck and [docs/prompts.html](docs/prompts.html) with `python -m tools.prompt_slides`. Displayed instructions are read from source with company names omitted for presentation. The public deck is at https://wonderful-meadow-09d52640f.5.azurestaticapps.net (Static Web App `caldova-slides`; redeploy with `npx @azure/static-web-apps-cli deploy` on a copy of `docs\*.html` and the token from `az staticwebapp secrets list`).
+Regenerate the main deck, [docs/prompts.html](docs/prompts.html) and the readable media-story page with `python -m tools.prompt_slides` after restoring `requirements-dev.txt`. Displayed instructions are read from source with company names omitted for presentation. The public deck is at https://wonderful-meadow-09d52640f.5.azurestaticapps.net (Static Web App `caldova-slides`). Redeploy with `npx @azure/static-web-apps-cli deploy` and the token from `az staticwebapp secrets list`; stage **`docs\*.html`, `docs\mediastory.md`, and `docs\media\insurance-pitch\*.png`**, preserving the media directory structure. Copying only the HTML leaves the media story's images unavailable. Keep deployment credentials in the process environment, not source or command output.
 
 ## Demo environment
 
@@ -34,7 +34,7 @@ Use the **Work 2 Profile** Edge window for this environment. Verify the account 
 ## Presenting the demo
 
 1. Open the application and sign in with the Caldova operator account.
-2. The overview shows 40 cars across London, Manchester, Birmingham, Bristol, Leeds, and Edinburgh. Select a city, search a registration, or select a car on the map to inspect its state and recent position history.
+2. The overview shows 40 cars, including the green MINI in Stornoway. After reset, 39 cars are **On hire** and only the MINI is **Incident detected**. Parked rentals remain On hire; charging and low-battery scenarios are removed.
 3. Open **Fleet intelligence** or **Ask fleet copilot**. Try “How many kilometers did the fleet drive yesterday?”, “Which vehicles need attention?”, or “Compare utilisation across our branches.”
 4. In Caldova Microsoft 365 Copilot, choose **Agents > Caldova Fleet IQ**. The native Fabric agent answers live data questions. The separately installed **Caldova Drive** Teams app is used for morning notification cards.
 5. Open **Morning briefing**. Generate the previous day's report, or send it to the configured Teams personal chat. A receipt prevents ordinary repeated delivery for the same reporting date.
@@ -44,11 +44,41 @@ The data is generated by the included vehicle simulator and actually ingested in
 
 ## Insurance incident journey
 
-Open **Incident centre**. The prepared cases include a completed booking, a recommendation awaiting your approval, an inspection-required report, and a fresh incident awaiting customer evidence.
+Open **Incident centre**. The presentation uses two MINI cases: one ready to choose between three real garage quotations, and one fresh customer form with its own reporting email. Neither repair is approved.
+
+Prepare a new pair before a presentation:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.prepare_mini_demo --new-run
+```
+
+This cleans prior pending cases, submits **`media\crash2.png` and `media\crash1.png`** to the prepared MINI case and waits for actual evidence processing, privacy checks, RFQs, garage responses and the coordinator recommendation. It also ingests a second impact for the same MINI through Fabric and leaves that second report completely untouched. Its real initial email goes to the configured admin inbox. The command prints both case links and the fresh email subject; `.local\two-mini-demo.json` records the run. No quotation is approved or booked.
+
+Run `python -m tools.prepare_mini_demo` **without** `--new-run` to resume an interrupted preparation or verify the same unused pair. To prepare only one fresh case instead, use `python -m tools.reset_mini`. The normal incident button still prevents accidentally opening duplicate incidents for a car; only the explicit two-stage presenter setup creates the pair.
+
+Old Fabric impacts cannot reopen retired cases. Fleet mileage history, vehicle register and routes are retained. Non-MINI history is archived; original mailbox messages remain historical correspondence. Use the newly printed email subject for the fresh form. The map still has 39 cars On hire and one affected MINI, even though it has two presentation cases.
 
 To start a new case, click a car on the **Overview** map and choose **Simulate incident**. This sends impact telemetry to Fabric, and the button changes to **Open incident** once detection opens the case.
 
-Use **Open customer journey** to show the phone-message preview and its actual secure intake link. Upload `static\demo-assets\bumper-dent.jpg` or your own supported photo, add an explanation, and submit. Alternatively, **Simulate customer report** has the Foundry customer agent **caldova-customer** (`python -m tools.provision_customer_agent`) write the account from the photo and telemetry, upload the photo and submit. The **Microsoft Foundry evidence agent** prepares a redacted PDF; the coordinator and three published Copilot Studio garage agents produce actual email requests and replies through dedicated Caldova mailboxes. No real outside garage is contacted.
+When the incident is awaiting its first customer report, the workflow sends one real email from the claims mailbox to the configured `customer_notification_mailbox`. For this demo, the user selected **admin@caldova08667473.onmicrosoft.com**. In that inbox, look for **`[case reference] [REPORT] Your secure incident report link`**. The email opens the actual customer website with editable contact details, photo upload and an empty incident-description field. It is also recorded under **The actual correspondence**. The trusted recipient comes from configuration, never from an email address entered into the report.
+
+Use **Open customer journey** to show the phone-message preview with the same secure intake link as the email. The current upload image is **`media\crash1.png`**, supplied by the user: a **green MINI Cooper, YK23 LZP**, represented by **CD-006**. Use that car when demonstrating this photo. **Simulate customer report** is available only for this vehicle; other cars require matching photos uploaded manually. It uses the real Foundry customer agent to write the account, preserve the original PNG and submit the report.
+
+The supplied photo shows front-bumper scuffs and a readable registration plate. The actual Foundry check redacted the plate but requested inspection because it identified possible fender involvement. Keep that review result rather than forcing an automatic quotation. Existing prepared quotation cases remain available for the cost/policy comparison.
+
+`python -m tools.sync_demo_vehicle` synchronizes only the revised MINI identity and preserves all other cars. `Vehicles.RegisterVersion` selects the latest register revision; telemetry IDs, routes, odometers and historical incident snapshots are unchanged. Run `python -m tools.intelligence --refresh-schema` after the new fields have reached the Lakehouse. The portal uses neutral operational labels; tenant/resource identifiers and original historical correspondence are retained.
+
+Use the current [MINI customer journey](https://caldovadrive08667473.azurewebsites.net/#incidents), not a case ID copied from an earlier run. The reset command prints its exact **`[case reference] [REPORT] Your secure incident report link`** subject.
+
+The form starts with editable **Alex Morgan / alex.morgan@example.com** contact details. **What happened? starts empty** and remains required. The safe-place and assistance checkboxes are removed; omitted answers remain unrecorded rather than being set to false. Existing API clients can still explicitly request assistance. The confirmation page and new initial emails end at **Your case reference is ...**.
+
+Face and text masks are positioned by local **YuNet** and **PP-OCRv3** detectors, not estimated by the language model. Both use the same orientation-corrected image as the renderer; text coordinates are mapped back from the detector's letterboxed input. Foundry then reviews damage and independently checks the masked image. The small, checksum-verified models and their licences are under `fleet\models`; the hosted dependency is `opencv-python-headless`.
+
+For an existing case stopped at **Evidence review required**, **Reprocess existing evidence** applies the current pipeline without asking the customer to upload again. Original files and the customer account are unchanged; the prior report, masks and PDF are archived before replacement. Quoted, approved or booked cases cannot use this action.
+
+Weather context now comes from **Microsoft Web IQ** web search with source links. Search results may not establish conditions at the exact incident time, so the UI does not present them as verified station observations. Configure `WEB_IQ_API_KEY` as a process environment variable locally and as an App Service application setting (or Key Vault reference) when deployed; never commit the key. The MINI is held at its configured Stornoway position without adding travel distance or changing other cars; its original telemetry remains intact.
+
+Garage RFQs are external-facing emails. The coordinator and evidence prompts exclude internal instructions, privacy-check commentary and statements such as “No personal identifiers or license plate information are included.” Actual commercial requirements, genuine OEM parts and the no-repair-without-approval condition remain.
 
 Evidence processing uses Foundry resource **caldovadrive08667473-foundry**, project **caldova-insurance**, and agent **caldova-incident-evidence**. Calls go through the Foundry project agent endpoint with managed identity. There is no standalone Azure OpenAI account in the running demo.
 
@@ -58,9 +88,15 @@ The [Word repair policy](policies/Caldova-Repair-Policy.docx), **CD-REP-001 v1.0
 
 The controlled document is published in the Caldova operator's **OneDrive for Business (SharePoint-backed)** under **Caldova Drive / Policies**; the dashboard links to the live Word document. Its actual URL, item ID and hashes are in `policies\publication.json`. The native garage replies, unchanged quotation-evidence copies, and decision packet are delivered to the operator's real mailbox, so main Microsoft 365 Copilot with **Work IQ** can compare the Word policy with the supplier statements and cite both. This is separate from the Fabric data agent's Lakehouse queries.
 
-Edit `policies\repair-policy.json` to change the controlled clauses, then run `.\.venv\Scripts\python.exe -m tools.publish_repair_policy`, publish the affected agents with `tools\publish_agents.ps1`, and deploy the app. Publication uses the existing, approved Caldova Content Studio delegated account, not tenant-wide app-only file access. A changed policy source without a matching published Word version is rejected.
+Edit `policies\repair-policy.json` to change the controlled clauses, then run `.\.venv\Scripts\python.exe -m tools.publish_repair_policy` and deploy the matching approval rules. Publication uses the existing approved delegated account, not tenant-wide app-only file access. The app verifies the publication's source hash, supplies the policy and Word link to the Studio agents, and enforces parts eligibility before booking.
 
-The native agents are integrated through a Graph inbox adapter and Direct Line. Native Outlook connector triggers are not claimed. The operator receives real decision packets that Work IQ in Microsoft 365 Copilot can retrieve and cite; this work-context retrieval was verified separately from the Fabric live-data query.
+The active repair runtime is the previous **Copilot Studio + application-managed policy/email** implementation. `fleet\repair_workflow.py` supplies the controlled policy, calls the secured Studio agents, validates their output and sends through the restricted Exchange transport. Customer email does not depend on Foundry tool execution or Work IQ authentication.
+
+The background evidence endpoint uses a tool-free Foundry version; adding user-authenticated mail/web connections to that processing version can stop the workflow before any RFQ is sent. Keep those connections in interactive versions. Face and text masking are local tools and remain active. After the customer uploads photos, completes the account and selects **Submit report**, evidence review and garage requests/replies progress automatically.
+
+At the user's request, the experimental Foundry repair agents, function definitions and native `work-iq` connection are retained but **not used by the running repair workflow**. The separate Foundry evidence/customer agents remain active. Microsoft 365 Copilot can still use Work IQ independently to discuss the policy and received quotation emails.
+
+Use `tools\publish_agents.ps1` for the active Studio agents. The retained `tools.publish_repair_agents` and `tools.configure_workiq` commands manage the experimental Foundry configuration only; they are not prerequisites for resetting or presenting the working demo.
 
 ## Architecture
 

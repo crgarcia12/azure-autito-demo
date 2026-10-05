@@ -30,14 +30,15 @@ class RepairMail:
         self.allowed = {self.config["claims_mailbox"].casefold(), *(garage["mailbox"].casefold() for garage in self.config["garages"])}
         self.credential = agent_credential()
         self.operator = assert_caldova_address(settings()["report_recipient"])
+        self.customer = assert_caldova_address(self.config["customer_notification_mailbox"])
 
     def mailbox(self, address: str) -> str:
         if address.casefold() not in self.allowed:
-            raise IncidentError("Email transport is restricted to the four approved Caldova inboxes.", 403)
+            raise IncidentError("Email transport is restricted to the approved workflow inboxes.", 403)
         return quote(address, safe="")
 
     def recipient(self, sender: str, address: str) -> None:
-        if sender.casefold() == self.config["claims_mailbox"].casefold() and address.casefold() == self.operator:
+        if sender.casefold() == self.config["claims_mailbox"].casefold() and address.casefold() in {self.operator, self.customer}:
             return
         self.mailbox(address)
 

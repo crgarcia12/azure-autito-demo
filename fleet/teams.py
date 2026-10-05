@@ -54,10 +54,10 @@ class TeamsAgent:
         sender = activity.from_property
         user = getattr(sender, "aad_object_id", None)
         if tenant != self.config["tenant_id"] or user != self.config["admin_object_id"]:
-            await context.send_activity("This fleet workspace is restricted to its configured Caldova demo operator.")
+            await context.send_activity("This fleet workspace is restricted to its configured operator.")
             return False
         if activity.conversation.conversation_type not in ("personal", None):
-            await context.send_activity("Use your personal Caldova Drive chat to access this fleet workspace.")
+            await context.send_activity("Use your personal fleet assistant chat to access this workspace.")
             return False
         reference = activity.get_conversation_reference()
         await asyncio.to_thread(
@@ -68,7 +68,7 @@ class TeamsAgent:
     async def on_installed(self, context: TurnContext, _) -> None:
         if await self.allowed(context):
             await context.send_activity(
-                "Welcome to Caldova Drive. Ask about your UK fleet, locations, vehicle health or yesterday's kilometers. "
+                "Welcome to Fleet Operations. Ask about your UK fleet, locations, vehicle health or yesterday's kilometers. "
                 "Your daily fleet briefing arrives here at 08:00 Europe/Madrid."
             )
 
@@ -107,7 +107,7 @@ class TeamsAgent:
                 reference = context.activity.get_conversation_reference()
                 reference.user = ChannelAccount(
                     id=self.config["admin_object_id"], aad_object_id=self.config["admin_object_id"],
-                    name="Caldova fleet operator",
+                    name="Fleet operator",
                 )
                 await asyncio.to_thread(
                     self.store.put, "teams-reference.json",
@@ -119,8 +119,8 @@ class TeamsAgent:
                 "https://smba.trafficmanager.net/teams/", "https://api.botframework.com",
                 ConversationParameters(
                     is_group=False,
-                    bot=ChannelAccount(id=self.config["agent_app_id"], name="Caldova Drive"),
-                    members=[ChannelAccount(id=self.config["admin_object_id"], name="Caldova fleet operator")],
+                    bot=ChannelAccount(id=self.config["agent_app_id"], name="Fleet assistant"),
+                    members=[ChannelAccount(id=self.config["admin_object_id"], name="Fleet operator")],
                     tenant_id=self.config["tenant_id"],
                     channel_data={"tenant": {"id": self.config["tenant_id"]}},
                 ),
@@ -133,7 +133,7 @@ class TeamsAgent:
         card = {
             "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.5",
             "body": [
-                {"type": "TextBlock", "text": "CALDOVA DRIVE · MORNING BRIEFING", "size": "Small", "weight": "Bolder", "color": "Accent"},
+                {"type": "TextBlock", "text": "FLEET OPERATIONS · MORNING BRIEFING", "size": "Small", "weight": "Bolder", "color": "Accent"},
                 {"type": "TextBlock", "text": f"{briefing['totalKm']:,.1f} km", "size": "ExtraLarge", "weight": "Bolder"},
                 {"type": "TextBlock", "text": f"{briefing['reportDate']} · Europe/Madrid · {briefing['activeVehicles']} vehicles on the road", "isSubtle": True, "wrap": True},
                 {"type": "TextBlock", "text": briefing["text"][:12000], "wrap": True},

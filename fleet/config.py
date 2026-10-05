@@ -18,10 +18,10 @@ def settings() -> dict[str, Any]:
     else:
         state_path = ROOT / ".local" / "deployment.json"
         if not state_path.exists():
-            raise RuntimeError("Provision the Caldova demo before starting the application.")
+            raise RuntimeError("Provision the demo environment before starting the application.")
         config.update(json.loads(state_path.read_text(encoding="utf-8")))
     if config["tenant_id"] != "b6883271-971b-4198-92a5-8ad615765572":
-        raise RuntimeError("Only the confirmed Caldova demo tenant is supported.")
+        raise RuntimeError("Only the configured demo tenant is supported.")
     return config
 
 

@@ -1,9 +1,9 @@
 {
   "id": "CD-REP-001",
-  "title": "Caldova Drive Repair Policy",
+  "title": "Repair Policy",
   "version": "1.0",
   "effective_date": "2026-10-02",
-  "owner": "Caldova Claims Operations",
+  "owner": "Claims Operations",
   "currency": "GBP",
   "downtime_cost_per_day": 100,
   "maximum_repair_quote": 2500,
@@ -14,7 +14,7 @@
     {
       "id": "RP-01",
       "title": "Scope and authority",
-      "text": "This policy applies to every new repair approval and booking for a Caldova-insured rental vehicle. Completed historical bookings retain their original decision records. Safety, roadworthiness, liability and insurance coverage require the appropriate assessment; a photograph or quotation does not establish them."
+      "text": "This policy applies to every new repair approval and booking for an insured rental vehicle. Completed historical bookings retain their original decision records. Safety, roadworthiness, liability and insurance coverage require the appropriate assessment; a photograph or quotation does not establish them."
     },
     {
       "id": "RP-02",

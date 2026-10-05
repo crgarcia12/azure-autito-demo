@@ -4,9 +4,12 @@ import httpx
 from PIL import Image
 
 from tools.cloud import ROOT
+from fleet.demo_case import PHOTO
 
 
 def main():
+    with Image.open(PHOTO) as supplied:
+        supplied.verify()
     source = ROOT / ".local" / "bumper-damage-original.jpg"
     if not source.exists():
         response = httpx.get("https://upload.wikimedia.org/wikipedia/commons/d/d7/Jetta_Mk._IV_Bumper_Damage.jpg", timeout=90)
@@ -25,7 +28,7 @@ def main():
         dent.write_bytes(response.content)
     with Image.open(dent) as image:
         image.convert("RGB").save(destination / "bumper-dent.jpg", quality=92)
-    print("Prepared the public-domain incident photographs, including the clear bumper-damage image.")
+    print(f"Primary upload photo: {PHOTO}. Historical public-domain test photographs are also available.")
 
 
 if __name__ == "__main__":

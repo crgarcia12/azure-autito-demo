@@ -6,6 +6,7 @@ from decimal import Decimal
 import json
 import logging
 import re
+from urllib.parse import urlparse
 
 from fleet.domain import utc_text
 from fleet.evidence import EvidenceService
@@ -16,8 +17,20 @@ from fleet.studio import StudioAgents
 from fleet.config import settings
 
 LOG = logging.getLogger("caldova.repairs")
-QUOTE_START = "CALDOVA_QUOTE_JSON:"
-BOOKING_START = "CALDOVA_BOOKING_JSON:"
+QUOTE_START = "QUOTE_DATA_JSON:"
+BOOKING_START = "BOOKING_DATA_JSON:"
+INTERNAL_EMAIL_NOTE = re.compile(
+    r"\b(?:no personal (?:identifiers|information|data)|privacy (?:check|verification)|"
+    r"redaction (?:check|verification)|(?:system|developer) (?:prompt|instructions))\b",
+    re.IGNORECASE,
+)
+
+
+def validate_external_rfq(answer: dict) -> None:
+    if not isinstance(answer.get("body"), str) or len(answer["body"]) < 30:
+        raise IncidentError("The coordinator did not produce a complete quotation request.")
+    if INTERNAL_EMAIL_NOTE.search(answer["body"]):
+        raise IncidentError("The quotation email contains internal processing notes and must be regenerated before sending.")
 
 
 def extract_payload(body: str, marker: str) -> dict:
@@ -34,10 +47,51 @@ class RepairWorkflow:
     def __init__(self, cases: Incidents):
         self.cases = cases
         self.evidence = EvidenceService(cases)
-        self.studio = StudioAgents()
         self.mail = RepairMail(cases)
+        self.studio = StudioAgents()
         self.config = insurance_config()
         self.lock = asyncio.Lock()
+
+    async def notify_customer(self, case_id: str) -> None:
+        case = self.cases.get(case_id)
+        key = f"{case_id}/customer-incident-email"
+        receipt = self.mail.operation(key)
+        if receipt and receipt["state"] == "sent":
+            self.mail.record(case_id, receipt["result"], "customer_notification_sent", "Claims mailbox")
+            return
+        if case["status"] != "awaiting_report" or case["report_received"] or case.get("evidence_history"):
+            return
+        content_key = key + "/content"
+        content = self.cases.store.get(content_key)
+        if content is None:
+            link = self.cases.reporting_link(case_id, settings()["appUrl"])
+            vehicle = case["vehicle"]
+            vehicle_description = " ".join(value for value in (vehicle.get("Colour"), vehicle["Make"], vehicle["Model"]) if value)
+            content = {
+                "recipient": self.config["customer_notification_mailbox"],
+                "subject": f"[{case_id}] [REPORT] Your secure incident report link",
+                "url": link["url"],
+                "body": (
+                    "Incident report request\n\n"
+                    f"We detected a possible impact involving your rental {vehicle_description} "
+                    f"({vehicle['Registration']}).\n\n"
+                    "Your safety comes first. In an emergency call 999. Please complete the report only when you are in a safe place.\n\n"
+                    "Tell us what happened using your secure reporting page:\n"
+                    f"{link['url']}\n\n"
+                    "On the page, add photographs of the affected area and briefly describe what happened. "
+                    "Avoid including faces, personal documents or other identifying details in the photographs.\n\n"
+                    f"Your case reference is {case_id}."
+                ),
+            }
+            self.cases.store.create(content_key, content)
+            content = self.cases.store.get(content_key)
+        # A retry must retain the original email's link, not silently send an expired or replaced one.
+        self.cases.authorize(case_id, urlparse(content["url"]).fragment)
+        message = await self.mail.send(
+            key=key, case_id=case_id, sender=self.config["claims_mailbox"],
+            recipient=content["recipient"], subject=content["subject"], body=content["body"],
+        )
+        self.mail.record(case_id, message, "customer_notification_sent", "Claims mailbox")
 
     async def rfq(self, case_id: str) -> None:
         case = self.cases.get(case_id)
@@ -51,6 +105,7 @@ class RepairWorkflow:
         if not generated:
             generated = await self.studio.invoke("cdv_repaircoordinator", {
                 "operation": "quote_request", "case_id": case_id,
+                "audience": "External garage. The body will be sent as an actual quotation-request email, not an internal report.",
                 "vehicle": {key: case["vehicle"][key] for key in ("Make", "Model")},
                 "redacted_report": report["summary"], "customer_description": report["redacted_description"],
                 "photos": "Privacy-checked photographs are included in the attached repair brief PDF.",
@@ -60,10 +115,10 @@ class RepairWorkflow:
                 "repair_policy": {**repair_policy(), **policy_reference()},
                 "deadline": "Respond within the current operational review window.",
             })
+            validate_external_rfq(generated["result"])
             self.cases.store.put(generated_key, generated)
         answer = generated["result"]
-        if not isinstance(answer.get("body"), str) or len(answer["body"]) < 30:
-            raise RuntimeError("The coordinator did not produce a complete quotation request.")
+        validate_external_rfq(answer)
         if case["status"] == "report_ready":
             def started(current):
                 if current["status"] != "report_ready":
@@ -71,7 +126,7 @@ class RepairWorkflow:
                 current["status"] = "requesting_quotes"
                 current["rfq_agent"] = generated["agent"]
                 return generated["agent"]
-            self.cases.change(case_id, "quotes_requested", "Copilot Studio", started)
+            self.cases.change(case_id, "quotes_requested", generated["agent"]["name"], started)
         attachment = (self.evidence.root / case_id / "repair-brief.pdf").read_bytes()
         for garage in self.config["garages"]:
             message = await self.mail.send(
@@ -125,7 +180,13 @@ class RepairWorkflow:
                 })
                 result = generated["result"]
                 if result.get("decision") != "quote" or result.get("quote") != offer:
-                    raise IncidentError(f"{garage['name']} needs further information or returned terms outside its approved rate card.")
+                    self.cases.store.put(key + "/rejected", generated)
+                    actual = result.get("quote")
+                    changed = [field for field, value in offer.items() if not isinstance(actual, dict) or actual.get(field) != value]
+                    raise IncidentError(
+                        f"{garage['name']} did not return its approved quotation: decision={result.get('decision')}; "
+                        f"changed fields={', '.join(changed[:8]) or 'none'}. The response has been retained for review."
+                    )
                 self.cases.store.put(key, generated)
             result = generated["result"]
             body = (
@@ -243,12 +304,15 @@ class RepairWorkflow:
                 or result["result"].get("policy_version") != recommendation["policy"]["version"]
                 or sorted(result["result"].get("excluded_garage_ids", [])) != expected_exclusions):
             raise IncidentError("The coordinator did not acknowledge the policy and excluded quotations.")
+        latest = self.cases.get(case_id)
+        if compare_quotes(list(latest["quotes"].values()), latest["created_at"])["quote_set_sha256"] != recommendation["quote_set_sha256"]:
+            raise IncidentError("The quotations changed while the agent was reviewing them.")
         def prepared(current):
             if current["status"] != "recommendation_ready":
                 raise IncidentError("The case changed during recommendation generation.")
             current["recommendation"] = {**recommendation, "agent": result["agent"], "ai_summary": result["result"]}
             return {"garage_id": recommendation["garage_id"], "agent": result["agent"]}
-        self.cases.change(case_id, "recommendation_prepared", "Copilot Studio", prepared, version=case["version"])
+        self.cases.change(case_id, "recommendation_prepared", result["agent"]["name"], prepared, version=latest["version"])
 
     @staticmethod
     def booking_commitment(case: dict) -> dict:
@@ -271,7 +335,7 @@ class RepairWorkflow:
         garage = next(item for item in self.config["garages"] if item["id"] == case["approval"]["garage_id"])
         offer = require_approved_quote(case)
         body = (
-            f"Caldova approves your quotation for {case_id}.\n"
+            f"Your quotation for {case_id} has been approved.\n"
             f"Approved total including VAT: GBP {offer['amount_gbp']}.\n"
             f"Start: {offer['available_from']}. Expected return: {offer['ready_by']}.\n"
             f"Scope: {offer['scope']}\nExclusions: {offer['exclusions']}\n"
@@ -348,7 +412,7 @@ class RepairWorkflow:
                if recommendation["policy"].get("id") else "")
             + f"Case dashboard: {config['appUrl']}/#incidents?case={case_id}\n"
             f"Sources: Fabric vehicle telemetry; the customer report; the three original quotation replies; "
-            + (f"Copilot Studio agent {recommendation['agent']['name']} ({recommendation['agent']['id']})."
+            + (f"{recommendation['agent'].get('provider', 'Copilot Studio')} agent {recommendation['agent']['name']} ({recommendation['agent']['id']})."
                if recommendation.get("agent") else "deterministic repair-policy review. No eligible offer is recommended.")
         )
         message = await self.mail.send(
@@ -361,7 +425,9 @@ class RepairWorkflow:
         async with self.lock:
             for case in self.cases.list():
                 try:
-                    if case["status"] == "evidence_received":
+                    if case["status"] == "awaiting_report":
+                        await self.notify_customer(case["id"])
+                    elif case["status"] == "evidence_received":
                         await self.evidence.assess(case["id"])
                     elif case["status"] in {"report_ready", "requesting_quotes"}:
                         await self.rfq(case["id"])

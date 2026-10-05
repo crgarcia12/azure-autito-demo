@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microsoft IQ for insurance - Sales media story</title>
+<style>
+  :root { color-scheme: light; --ink:#172033; --muted:#5d6a82; --line:#dde3ee; --accent:#117865; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#f7f8fb; color:var(--ink); font:17px/1.7 "Segoe UI",system-ui,sans-serif; }
+  nav { position:sticky; top:0; z-index:1; padding:14px 24px; background:#ffffffed; border-bottom:1px solid var(--line); display:flex; gap:24px; flex-wrap:wrap; }
+  nav a { color:var(--accent); font-weight:600; text-decoration:none; }
+  main { max-width:1060px; margin:40px auto 80px; padding:0 28px; }
+  h1 { font-size:clamp(30px,4vw,46px); line-height:1.15; letter-spacing:-.03em; }
+  h2 { font-size:29px; line-height:1.25; margin-top:64px; padding-top:24px; border-top:1px solid var(--line); scroll-margin-top:90px; }
+  h3 { scroll-margin-top:90px; }
+  p,li { overflow-wrap:anywhere; }
+  a { color:var(--accent); text-underline-offset:3px; overflow-wrap:anywhere; }
+  blockquote { margin:24px 0; padding:8px 24px; background:white; border-left:4px solid var(--accent); font-size:20px; }
+  img { display:block; max-width:100%; height:auto; margin:24px auto; border:1px solid var(--line); border-radius:10px; }
+  table { display:block; width:100%; overflow-x:auto; border-collapse:collapse; margin:24px 0; font-size:15px; }
+  th,td { padding:12px; border:1px solid var(--line); vertical-align:top; text-align:left; }
+  th { background:#eaf2ed; }
+  code { font-size:.9em; background:#e9edf3; border-radius:3px; padding:2px 4px; overflow-wrap:anywhere; }
+  hr { border:0; border-top:1px solid var(--line); margin:40px 0; }
+  @media(max-width:600px) { main { padding:0 18px; } blockquote { padding:6px 16px; font-size:18px; } nav { font-size:14px; gap:16px; } }
+  @media print { nav { display:none; } body { background:white; } main { max-width:none; margin:0; padding:0; } img,blockquote { break-inside:avoid; } h2 { break-after:avoid; } }
+</style>
+</head>
+<body>
+<nav aria-label="Presentation navigation"><a href="./#1">Open presentation</a><a href="#capture-register">Screenshot sources</a><a href="mediastory.md" download>Download Markdown</a></nav>
+<main>
+<h1 id="microsoft-iq-for-insurance-from-incident-to-an-accountable-decision">Microsoft IQ for insurance: from incident to an accountable decision</h1>
+<p><strong>Sales narrative with screen-by-screen pitch and visuals</strong></p>
+<p><strong>Audience:</strong> insurance executives, claims leaders, architects and technical staff.<br />
+<strong>Length:</strong> 10 minutes, followed by technical questions.</p>
+<p><strong>Opening sequence:</strong> the business operation, the agents we add, then the product lanes.</p>
+<h2 id="the-pitch-in-30-seconds">The pitch in 30 seconds</h2>
+<blockquote>
+<p>&quot;A minor vehicle incident can trigger a disproportionate amount of work: collecting evidence, chasing garages, checking parts and comparing repair dates. The opportunity is not simply to add a chatbot. It is to connect the facts, the policy and the people so the next decision arrives with the evidence already organised. Microsoft IQ provides that context; focused agents do the preparation; your people retain authority.&quot;</p>
+</blockquote>
+<p>Three ideas should remain with the audience: <strong>less coordination effort, better-informed repair decisions, and control that remains visible.</strong></p>
+<p>The images below are actual presentation and demo captures, not mock-ups. The <a href="#capture-register">capture register</a> identifies their dates and cases. Use the live application for current status and <strong>The actual correspondence</strong> for the real emails.</p>
+<p>Before presenting, run <code>.\.venv\Scripts\python.exe -m tools.reset_mini</code>. It prepares 39 cars On hire and one green MINI incident in Stornoway, sends the real initial email through the application, and leaves the customer report unsubmitted. The command prints the current case link and email subject.</p>
+<hr />
+<h2 id="1-start-with-the-operation-not-the-technology">1. Start with the operation, not the technology</h2>
+<p><strong>Time:</strong> 45 seconds. <strong>Audience:</strong> everyone.</p>
+<p><strong>Open:</strong> <a href="https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#1">Presentation, slide 1</a>.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;This is a familiar motor-repair process. An incident is reported, the evidence is reviewed, quotes are compared, a manager approves and a garage confirms the booking. The friction lives between those steps: incomplete information, repeated questions and decisions waiting in inboxes. We will keep the process recognisable and improve the work around each decision.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the five stages, the original-parts rule and the manager's approval. Establish the business goal before naming a product.</p>
+<p><img src="media/insurance-pitch/01-business-process.png" alt="Five business stages: incident reported, evidence reviewed, quotes compared, manager approves and repair booked." /></p>
+<p><em>Published presentation: the insurance operation, without company branding or technology labels.</em></p>
+<p><strong>Transition:</strong> &quot;Now let us add narrowly defined responsibilities to that operation.&quot;</p>
+<h2 id="2-introduce-the-agents-as-useful-business-roles">2. Introduce the agents as useful business roles</h2>
+<p><strong>Time:</strong> 30 seconds. <strong>Audience:</strong> executives first; technical staff second.</p>
+<p><strong>Open:</strong> <a href="https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#4">Presentation, agent overview</a>.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;We are not introducing one agent with unlimited responsibility. An evidence agent prepares the repair brief. A coordinator requests and compares offers. Each garage supplies its own quotation and confirmation. A fleet assistant answers operational questions. These are focused roles around the people who remain accountable, not a replacement for the claims manager.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the evidence agent, coordinator, three garage agents and fleet data agent. Leave connection names and polling intervals for questions.</p>
+<p><img src="media/insurance-pitch/02-agent-roles.png" alt="Agent overview showing the evidence agent, claims coordinator, three garage agents, fleet data agent and the human roles." /></p>
+<p><em>Published presentation: the agent roles and their orchestration.</em></p>
+<p><strong>Technical cue:</strong> the main journey uses one Foundry evidence agent, four Copilot Studio repair agents, and one Fabric data agent. The application supplies the controlled policy and delivers validated emails. Telemetry detection is a rule and pipeline, not another AI agent.</p>
+<p><strong>Transition:</strong> &quot;Where should these responsibilities run, and where does each get its context?&quot;</p>
+<h2 id="3-put-the-roles-into-the-microsoft-architecture">3. Put the roles into the Microsoft architecture</h2>
+<p><strong>Time:</strong> 45 seconds. <strong>Audience:</strong> both groups.</p>
+<p><strong>Open:</strong> <a href="https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#3">Presentation, slide 3: product lanes</a>.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;Fabric holds the operational facts. Foundry prepares the photographic evidence. Copilot Studio agents draft and compare the repair offers, and the application delivers the correspondence. The manager retains authority. Work IQ lets us independently ask about the policy and what suppliers actually said.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the path across the lanes, then pause on the human approval gate. Do not read every box aloud.</p>
+<p><img src="media/insurance-pitch/03-product-lanes.png" alt="Product lanes connecting people, Fabric, Foundry and Copilot Studio, with a visible human approval gate." /></p>
+<p><em>Published presentation: implementation responsibilities, not a claim that the agents call one another directly.</em></p>
+<p><strong>Technical cue:</strong> the active runtime is the restored app-managed flow: secured Direct Line calls to Studio, controlled policy supplied in context, and scoped Exchange transport with immutable receipts. Foundry repair functions are retained but are not the active path.</p>
+<p><strong>Transition:</strong> &quot;Let us follow one incident through that architecture.&quot;</p>
+<h2 id="4-show-that-the-incident-belongs-to-a-real-operation">4. Show that the incident belongs to a real operation</h2>
+<p><strong>Time:</strong> 45 seconds. <strong>Audience:</strong> executives.</p>
+<p><strong>Open:</strong> <a href="https://caldovadrive08667473.azurewebsites.net/">Live fleet dashboard</a>. Show 39 cars <strong>On hire</strong> and one <strong>Incident detected</strong>. Select the green MINI in Stornoway and open its incident.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;A car is not just a claim reference. It belongs to a rental, a branch and a fleet whose availability matters. Here, vehicle signals arrive in Fabric and can open an incident for attention. The business context tells us which asset is affected and why its time off the road matters.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> vehicle state, location and branch context. Do not quote the reference screenshot's mileage as today's live total.</p>
+<p><img src="media/insurance-pitch/04-fleet-context.png" alt="Recorded fleet dashboard with vehicle counts, a live map, fleet activity and branch mileage." /></p>
+<p><em>Recorded fleet interface, cropped to the operational content. Statistics are the captured snapshot.</em></p>
+<p><strong>Technical cue:</strong> Eventhouse holds telemetry; Activator and a Data Factory pipeline open cases. Fabric IQ's ontology relates Vehicle, Rental, Branch, Incident and RepairQuotation. The published data agent currently queries the governed Lakehouse tables; it is not directly connected to the ontology as a source.</p>
+<p><strong>Transition:</strong> &quot;The next step should be easy for the customer, not another administrative burden.&quot;</p>
+<h2 id="5-make-the-customer-interaction-straightforward">5. Make the customer interaction straightforward</h2>
+<p><strong>Time:</strong> 45 seconds. <strong>Audience:</strong> executives and customer-experience leaders.</p>
+<p><strong>Open:</strong> <a href="https://outlook.office.com/mail/">Outlook</a> in the demo administrator's session, which represents the customer inbox for this presentation. Find <strong><code>[case reference] [REPORT] Your secure incident report link</code></strong> and open its reporting link. Show the actual customer website without submitting the form during preparation.</p>
+<p>Use a new case marked <strong>Awaiting customer report</strong>. <strong>Open customer journey</strong> on the incident exposes the same link. Do not use <strong>Simulate customer report</strong> first; that submits the form and changes the customer page to a confirmation screen.</p>
+<p>For the current upload demonstration, select <strong>CD-006, the green MINI Cooper</strong>, and use <strong><code>media\crash1.png</code></strong>. Do not attach that photograph to a different car. The customer-report simulator is restricted to this matching vehicle.</p>
+<p>Live entry point: <a href="https://caldovadrive08667473.azurewebsites.net/#incidents">the current MINI incident</a>. Use the case and <code>[REPORT]</code> subject printed by the reset command. Previous MINI cases are deleted by reset; other journeys are retained as archived runs.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;The customer checks their contact details, adds photos and explains what happened. They do not need to reconstruct the vehicle details for several teams. Web search can provide weather context, but the customer's account remains their own.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the editable name/email at the top, the photo-upload control and the <strong>empty What happened? field</strong>. Weather never inserts a rain claim into the explanation.</p>
+<img src="media/insurance-pitch/05-customer-report.png" alt="Actual Stornoway customer form with contact prefills, photo upload, an empty explanation and separate weather context." width="390">
+<p><em>Actual unsubmitted MINI reporting form, opened using the link from its initial customer email.</em></p>
+<p><strong>Technical cue:</strong> the initial notification is a real email to the configured customer inbox. The reporting link is expiring and capability-based. Delivery is idempotent and recorded on the case. Safety and assistance questions are omitted, without inventing answers; the acknowledgement ends at the case reference. Web IQ searches public sources and returns links; its results are not treated as verified observations for the exact incident time.</p>
+<p><strong>Transition:</strong> &quot;The insurer now has evidence. The next challenge is turning it into a useful, shareable brief.&quot;</p>
+<h2 id="6-turn-evidence-into-a-decision-ready-repair-brief">6. Turn evidence into a decision-ready repair brief</h2>
+<p><strong>Time:</strong> 45 seconds. <strong>Audience:</strong> both groups.</p>
+<p><strong>Open:</strong> <strong>Incident evidence</strong> and <strong>Repair brief PDF</strong> in the <a href="https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-008FC82110">prepared case</a>. If asked, open <a href="https://ai.azure.com/">Foundry</a> and the configured evidence agent.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;This is where an agent can remove preparation work. It reviews the customer's account and photograph, describes the visible damage and prepares a privacy-processed brief for the repair network. The manager can still inspect the source evidence and the assessment limits. A useful draft does not become a definitive diagnosis.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the original evidence, the separate repair brief and the assessment limits.</p>
+<p><img src="media/insurance-pitch/06-evidence-review.png" alt="Actual case evidence, original bumper photo, privacy-processed repair brief and assessment limitations." /></p>
+<p><em>Actual prepared case: evidence and repair brief, cropped without changing the content.</em></p>
+<p><strong>Technical cue:</strong> this is <strong>Foundry Agent Service</strong>, not Foundry IQ retrieval. Local face/text detectors place the masks; Foundry reviews the already-masked image and checks for remaining identifying content. Structured responses and detector/model provenance are recorded. The archived photo below is not the current two-person MINI image.</p>
+<p><strong>Current upload photo:</strong> the green MINI image does contain a readable plate. An actual assessment masked the plate but requested inspection because of possible fender involvement. Preserve any such review result. The screenshot above and the linked previous quote case are archived comparison evidence, not a reclassification of the new MINI image.</p>
+<p><strong>Transition:</strong> &quot;Now comes the decision that makes this more than a productivity demo.&quot;</p>
+<h2 id="7-the-turning-point-the-fastest-and-cheapest-offer-is-wrong">7. The turning point: the fastest and cheapest offer is wrong</h2>
+<p><strong>Time:</strong> 2 minutes. <strong>Audience:</strong> claims leadership, finance, risk and technology.</p>
+<p><strong>Open:</strong> <strong>The actual correspondence</strong> and the original Outlook messages, then the Word policy link, three offers and downtime slider. If inspection is required, use the archived comparison without claiming that the new report was cleared.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;Alder is the tempting offer: the lowest price and the earliest return. But it proposes aftermarket parts, while this repair policy requires new original manufacturer parts. It is excluded before we optimise cost. Between the compliant offers, Metro costs GBP 50 more to repair the car but returns it two days earlier. At the stated downtime rate, that produces a GBP 150 lower expected total cost.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the red noncompliant card. Move the slider to zero: Riverside becomes the lowest-cost compliant choice. Return it to GBP 100: Metro wins. Alder remains ineligible at either rate.</p>
+<p><img src="media/insurance-pitch/07-policy-comparison.png" alt="Three actual repair quotations, with the cheaper and faster aftermarket offer excluded and the compliant Metro offer recommended." /></p>
+<p><em>Actual comparison for case CDI-008FC82110; calendar downtime is measured from the recorded incident date.</em></p>
+<table>
+<thead>
+<tr>
+<th>Offer</th>
+<th style="text-align:right">Repair incl. VAT</th>
+<th>Expected return</th>
+<th style="text-align:right">Calendar downtime</th>
+<th style="text-align:right">Repair + downtime at GBP 100/day</th>
+<th>Eligible?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alder</td>
+<td style="text-align:right">GBP 450</td>
+<td>6 October 2026</td>
+<td style="text-align:right">4 days</td>
+<td style="text-align:right">GBP 850</td>
+<td>No: aftermarket parts</td>
+</tr>
+<tr>
+<td>Metro</td>
+<td style="text-align:right">GBP 600</td>
+<td>7 October 2026</td>
+<td style="text-align:right">5 days</td>
+<td style="text-align:right">GBP 1,100</td>
+<td>Yes: new genuine OEM</td>
+</tr>
+<tr>
+<td>Riverside</td>
+<td style="text-align:right">GBP 550</td>
+<td>9 October 2026</td>
+<td style="text-align:right">7 days</td>
+<td style="text-align:right">GBP 1,250</td>
+<td>Yes: new genuine OEM</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Business takeaway:</strong> optimise the <strong>eligible outcome</strong>, not the cheapest isolated invoice. GBP 150 is the difference between two offers under the demo's stated downtime assumption, not a realised saving or an insurer-wide ROI claim.</p>
+<p><strong>Technical cue:</strong> RP-02 governs parts; RP-03 requires explicit declarations; RP-05 excludes noncompliant offers before ranking. Missing provenance requires clarification. Deterministic checks, not persuasive model prose, control eligibility.</p>
+<p><strong>Transition:</strong> &quot;A recommendation is useful only if the right person can inspect it and control the commitment.&quot;</p>
+<h2 id="8-keep-authority-with-the-manager">8. Keep authority with the manager</h2>
+<p><strong>Time:</strong> 1 minute 15 seconds. <strong>Audience:</strong> executives and risk leaders.</p>
+<p><strong>Open:</strong> the current recommendation and <strong>Approve &amp; book</strong> control only after all quotations and agent review are ready. Show the actual booking email and subsequent garage confirmation. The <a href="https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-EDB4612D4F">archived completed case</a> remains a read-only example if the live case needs inspection.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;The manager receives the evidence, the alternatives and the reason for the recommendation together. They may choose another compliant offer with a recorded reason, but cannot waive the parts policy through an override. Approval authorises the request. The repair is only marked booked after the garage confirms those terms.&quot;</p>
+</blockquote>
+<p><strong>Point to:</strong> the approval button, then the separate approval and confirmation events in the completed case.</p>
+<p><img src="media/insurance-pitch/08-human-approval.png" alt="Actual recommendation explaining the compliant choice above the Approve and book control." /></p>
+<p><em>Actual approval control, before a booking is authorised.</em></p>
+<p><strong>Technical cue:</strong> the selected quote and policy are fingerprinted and rechecked before dispatch. The completed case recorded matching approved and confirmed quotation hashes. This is an auditable repair workflow, not autonomous coverage adjudication.</p>
+<p><strong>Transition:</strong> &quot;Could a manager independently ask why this decision was made and see the original sources?&quot;</p>
+<h2 id="9-show-work-iq-connecting-policy-to-what-the-supplier-actually-said">9. Show Work IQ connecting policy to what the supplier actually said</h2>
+<p><strong>Time:</strong> 1 minute 30 seconds. <strong>Audience:</strong> everyone. This is the second key proof point.</p>
+<p><strong>Open:</strong> <a href="https://m365.cloud.microsoft/chat/conversation/da2d62d2-7c44-4d87-bad6-68aecbc648c0?auth=2&amp;tenantId=b6883271-971b-4198-92a5-8ad615765572">The verified Microsoft 365 Copilot conversation</a>, with <strong>Work IQ enabled</strong>. Open the Word-policy citation and the supplier-email citations.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;The policy is in a Word document. The supplier's commitment is in an email. Work IQ brings those pieces of work context into the answer, with citations. It identifies the same prohibited aftermarket offer and explains the compliant choice. This is not simply retrieving a price: it is connecting what the business requires with what the supplier actually offered.&quot;</p>
+</blockquote>
+<p><strong>Ask in a new conversation if needed:</strong></p>
+<blockquote>
+<p>&quot;Find repair policy CD-REP-001 v1.0 and the quotation-evidence emails for case CDI-008FC82110. Which offer is fastest and cheapest? Is it eligible? Recommend the best compliant option at GBP 100 per calendar downtime day. Cite the Word policy clauses and the original quotation emails.&quot;</p>
+</blockquote>
+<p><img src="media/insurance-pitch/09-work-iq-answer.png" alt="Excerpt of the actual Work IQ answer identifying the ineligible fastest and cheapest offer and recommending the compliant GBP 1,100 option." /></p>
+<p><em>Actual Work IQ response excerpt. The saved conversation contains the Word and all three quotation-email citations; open them live rather than treating this cropped excerpt as the source evidence itself.</em></p>
+<p><strong>Technical cue:</strong> Work IQ reasons over the operator's permission-aware Microsoft 365 context. The original supplier responses are preserved in quotation-evidence emails delivered to that operator. Fabric answers current operational-state questions; an older email describes what was communicated at that time.</p>
+<p><strong>Transition:</strong> &quot;That combination of business facts and work context is the Microsoft IQ proposition.&quot;</p>
+<h2 id="10-close-on-the-platform-opportunity-then-propose-a-measurable-pilot">10. Close on the platform opportunity, then propose a measurable pilot</h2>
+<p><strong>Time:</strong> 1 minute. <strong>Audience:</strong> executives, then the technical sponsor.</p>
+<p><strong>Open:</strong> <a href="https://wonderful-meadow-09d52640f.5.azurestaticapps.net/iq.html">Microsoft IQ overview slide</a>.</p>
+<p><strong>Say:</strong></p>
+<blockquote>
+<p>&quot;Microsoft IQ is the context layer, not another isolated chatbot. Fabric IQ provides business meaning and operational context. Work IQ connects the work around the decision. Foundry IQ is the route to reusable, permission-aware knowledge across a broader policy and document estate. The agents turn that context into prepared work. The business retains the controls.&quot;</p>
+</blockquote>
+<p><img src="media/insurance-pitch/10-microsoft-iq.png" alt="Microsoft IQ platform overview showing Work IQ, Fabric IQ, Foundry IQ and Web IQ as context capabilities for agents and applications." /></p>
+<p><em>Platform overview. Foundry IQ and Web IQ are expansion paths in this pitch, not deployed retrieval paths in the demonstrated repair journey.</em></p>
+<p><strong>Close with:</strong></p>
+<blockquote>
+<p>&quot;Let us start with one low-complexity motor-repair journey, one accountable process owner and one approved supplier cohort. We will baseline the handoffs, connect the agreed evidence and policy sources, and measure whether we reduce coordination effort and downtime without weakening control. Scale the pattern only after those measures justify it.&quot;</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Pilot measure</th>
+<th>What to measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Decision preparation</td>
+<td>Time from complete customer evidence to a decision-ready pack</td>
+</tr>
+<tr>
+<td>Operational effort</td>
+<td>Manual touches and supplier-chasing effort per eligible case</td>
+</tr>
+<tr>
+<td>Repair economics</td>
+<td>Compliant repair cost plus the insurer's agreed downtime or replacement-vehicle cost</td>
+</tr>
+<tr>
+<td>Policy control</td>
+<td>Noncompliant selections blocked; missing declarations routed for clarification</td>
+</tr>
+<tr>
+<td>Customer experience</td>
+<td>Time to a clear next step; repeat requests for information</td>
+</tr>
+<tr>
+<td>Grounding quality</td>
+<td>Whether answers cite the correct policy version and relevant supplier evidence</td>
+</tr>
+</tbody>
+</table>
+<p>Agree targets with the insurer before the pilot. Do not extrapolate the single-case cost comparison into annual savings or promise a loss-ratio improvement.</p>
+<hr />
+<h2 id="technical-questions-to-answer-confidently">Technical questions to answer confidently</h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer for this demo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What is actually live?</td>
+<td>Fabric telemetry and tables, ontology and graph, Foundry evidence processing, secured Studio repair agents, app-managed policy/email delivery, real mailbox receipts and operator approval. Work IQ is demonstrated independently in Microsoft 365 Copilot.</td>
+</tr>
+<tr>
+<td>Is the ontology powering the chatbot directly?</td>
+<td>The ontology and graph model the business relationships. The published data agent queries the governed Lakehouse tables used by that model; direct ontology-source attachment is not part of the current path.</td>
+</tr>
+<tr>
+<td>Does Foundry IQ inspect the photo?</td>
+<td>No. Foundry Agent Service runs the evidence agent. Foundry IQ is managed knowledge retrieval and a separate expansion discussion.</td>
+</tr>
+<tr>
+<td>Does the Word document alone block a booking?</td>
+<td>No. The Word policy and machine-readable policy share a controlled source. The application evaluates the structured parts declarations and revalidates the approved quote and policy.</td>
+</tr>
+<tr>
+<td>Can an agent email a garage by itself?</td>
+<td>In the active implementation, the agent produces structured content and the app validates and sends it through scoped Exchange access. The experimental Foundry functions were retained but rolled out of the running workflow at the user's request.</td>
+</tr>
+<tr>
+<td>Can the model approve an ineligible offer?</td>
+<td>Its output is checked. The API rejects prohibited parts, including an attempted human override. No eligible offers means review, not a default winner.</td>
+</tr>
+<tr>
+<td>Does this prove production claim-cycle reduction?</td>
+<td>No. The prepared run reached a recommendation in 210.44 seconds; a separate run completed booking in 289.06 seconds using configured supplier offers and real services. They are demo execution timings, not production SLAs or comparative benchmarks.</td>
+</tr>
+<tr>
+<td>What needs a production design?</td>
+<td>Insurer-specific policies, claims-system integration, consent and retention, roles, supplier onboarding, operational resilience, evaluations, service availability and licensing for the selected capabilities.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="presenter-preparation">Presenter preparation</h2>
+<p>Run the MINI reset command, then open the <a href="https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#1">deck at slide 1</a>, the newly printed case, its actual customer email and the verified Work IQ conversation in <strong>the existing demo administrator's Work 2 browser profile</strong>. Start with the business process, then the live MINI; do not start in a cloud resource portal.</p>
+<p>Confirm Fabric is active, the dashboard has fresh data, and the prepared quotation is still valid before the meeting. Inspect source citations and policy access. Do not click <strong>Approve &amp; book</strong> while rehearsing if the same case must remain available for the live decision.</p>
+<p>If a service is warming up or an answer is waiting for indexing, use the corresponding screenshot and describe it as a recorded run. Do not present a static capture as fresh telemetry, a live answer, or a newly confirmed booking.</p>
+<p>For exact operational clicks and provisioning details, use the <a href="https://github.com/crgarcia12/azure-autito-demo/blob/HEAD/docs/storyline.md">operator walkthrough</a> and <a href="https://github.com/crgarcia12/azure-autito-demo/blob/HEAD/docs/implementation.md">implementation runbook</a>. The spoken pitch above deliberately avoids the demo company's name.</p>
+<h2 id="capture-register">Capture register</h2>
+<p>All ten image files are stored alongside this document under <code>media/insurance-pitch/</code>. Application images are cropped only to remove navigation, company branding, unrelated account details and unused whitespace; no prices, results, agent answers or status labels were edited.</p>
+<table>
+<thead>
+<tr>
+<th>Images</th>
+<th>Source</th>
+<th>Capture context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01-03</td>
+<td>Business slide, restored Studio-agent overview and product lanes</td>
+<td>Captured 5 October 2026 from the presentation sources</td>
+</tr>
+<tr>
+<td>04</td>
+<td>Operational fleet dashboard: 39 On hire and one MINI incident</td>
+<td>5 October 2026; authenticated hosted capture with live Fabric data</td>
+</tr>
+<tr>
+<td>05</td>
+<td>Actual Stornoway MINI customer form opened from its reporting email</td>
+<td>Case CDI-CF6D654773; editable contact prefills and an empty explanation</td>
+</tr>
+<tr>
+<td>06-08</td>
+<td>Recorded hosted recommendation screenshot</td>
+<td>Case CDI-008FC82110, captured 2 October 2026 UTC</td>
+</tr>
+<tr>
+<td>09</td>
+<td>Actual Microsoft 365 Copilot conversation</td>
+<td>Same case; conversation <code>da2d62d2-7c44-4d87-bad6-68aecbc648c0</code>, captured 2 October 2026 UTC</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Published Microsoft IQ overview slide</td>
+<td>Captured 4 October 2026; platform framing</td>
+</tr>
+</tbody>
+</table>
+<p>Capture identities, dates and output shapes were checked against the saved browser and end-to-end receipts. The MINI incident and initial email were prepared for the live walkthrough; capturing its form did not submit the report, approve a repair or create a booking.</p>
+<h2 id="microsoft-references">Microsoft references</h2>
+<p>Product positioning checked on 4 October 2026:</p>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-iq/">Microsoft IQ: enterprise intelligence and shared organisational context</a></li>
+<li><a href="https://learn.microsoft.com/en-us/fabric/iq/overview">Fabric IQ: business data, semantic models and ontology</a></li>
+<li><a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/">Work IQ: permission-aware workplace intelligence</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/what-is-foundry-iq">Foundry IQ: managed knowledge bases and agentic retrieval</a></li>
+</ul>
+
+</main>
+</body>
+</html>

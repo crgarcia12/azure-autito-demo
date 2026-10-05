@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 from typing import Literal
+from urllib.parse import parse_qs, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,7 +26,7 @@ class ReplacementPart(BaseModel):
 def repair_policy() -> dict:
     policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
     if policy["replacement_parts_origin"] != "genuine_oem" or policy["replacement_parts_condition"] != "new":
-        raise ValueError("The approved Caldova repair policy requires new genuine OEM replacement parts.")
+        raise ValueError("The approved repair policy requires new genuine OEM replacement parts.")
     return policy
 
 
@@ -43,6 +45,17 @@ def policy_reference() -> dict:
             raise ValueError("The repair policy changed after its Word document was published. Republish before using it.")
         reference.update({key: publication[key] for key in ("document_url", "document_sha256", "drive_item_id", "etag")})
     return reference
+
+
+def policy_document() -> Path:
+    reference = policy_reference()
+    names = parse_qs(urlparse(reference["document_url"] or "").query).get("file", [])
+    if len(names) != 1 or Path(names[0]).name != names[0] or not names[0].endswith(".docx"):
+        raise ValueError("The policy publication must identify its controlled Word file.")
+    document = POLICY_PATH.parent / names[0]
+    if document.resolve().parent != POLICY_PATH.parent.resolve():
+        raise ValueError("The controlled Word file must remain inside the policy directory.")
+    return document
 
 
 def evaluate_parts(
@@ -94,9 +107,16 @@ def evaluate_parts(
 def policy_email_text() -> str:
     reference = policy_reference()
     policy = repair_policy()
-    lines = [f"{reference['title']} | {reference['id']} v{reference['version']}"]
+    lines = [f"Repair policy {reference['id']} v{reference['version']}"]
     if reference["document_url"]:
         lines.append("Controlled Word policy: " + reference["document_url"])
-    lines.extend(f"{clause['id']} - {clause['title']}: {clause['text']}"
-                 for clause in policy["clauses"] if clause["id"] in {"RP-02", "RP-03", "RP-04", "RP-05", "RP-07"})
+    lines.extend([
+        "RP-02: Replacement parts must be new genuine OEM parts approved by the vehicle manufacturer. "
+        "Aftermarket, used, refurbished and remanufactured replacements are not permitted.",
+        "RP-03: Identify each proposed component, manufacturer, origin, condition and vehicle approval. "
+        "Include your written parts declaration in the quotation.",
+    ])
+    if policy["allow_repair_without_replacement"]:
+        lines.append("RP-04: If no replacement parts are needed, explicitly confirm that the existing component will be repaired, subject to inspection.")
+    lines.append("Quotation only. No repair is authorised without a subsequent written approval.")
     return "\n".join(lines)

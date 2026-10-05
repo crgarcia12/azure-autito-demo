@@ -42,7 +42,7 @@ flowchart LR
     class S15,S16 m365
 ```
 
-**Colour key:** green = Microsoft Fabric · purple = Microsoft Foundry · blue = Copilot Studio agents · grey = Caldova app and people · orange = Microsoft 365 Copilot (Fabric IQ / Work IQ).
+**Colour key:** green = Microsoft Fabric · purple = Foundry evidence · blue = Copilot Studio repair agents · grey = app and people · orange = Microsoft 365 Copilot.
 
 **Opening line:** “A car has a minor bump. In the next few minutes you'll see Fabric detect it, the customer report it once, AI agents collect and compare three repair quotes, and a manager approve the best option. Then we'll ask Copilot what's happening across the whole fleet, and why.”
 
@@ -57,21 +57,21 @@ Use **Edge Work 2**, signed in as `admin@caldova08667473.onmicrosoft.com` for th
 | Operations dashboard | [Caldova Drive](https://caldovadrive08667473.azurewebsites.net) |
 | Fabric | [Caldova Drive - Fleet Intelligence workspace](https://app.fabric.microsoft.com/groups/19b68e4b-dd12-4e74-84d9-18fd9f1e2b49/list?experience=fabric) |
 | Foundry | [Microsoft Foundry](https://ai.azure.com) → resource **caldovadrive08667473-foundry** → project **caldova-insurance** → agent **caldova-incident-evidence** |
-| Claims coordinator | [Caldova Repair Coordinator in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/02d7a04b-93fc-4cb3-b07c-49156794520c/overview) |
+| Claims coordinator | [Repair coordinator in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/02d7a04b-93fc-4cb3-b07c-49156794520c/overview) |
 | Repair agent | [Metro Rapid Repair in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/988bbfcb-a31e-4a36-8d4b-ea88da60f225/overview) |
 | Email | [Outlook](https://outlook.office.com/mail/) → profile → **Open another mailbox** → `claims@caldova08667473.onmicrosoft.com` |
 | Word repair policy | [Caldova Drive Repair Policy - CD-REP-001 v1.0](https://caldova08667473-my.sharepoint.com/personal/admin_caldova08667473_onmicrosoft_com/_layouts/15/Doc.aspx?sourcedoc=%7BC468D6E0-99AD-4D58-A4A5-8894BDF73578%7D&file=Caldova-Repair-Policy.docx&action=default&mobileredirect=true) |
 | Microsoft 365 Copilot | [Caldova Microsoft 365 Copilot](https://m365.cloud.microsoft/chat/?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572) |
 
-For a short presentation, use the prepared cases at the matching stage. For a fresh run, select a vehicle without an active incident and follow the sequence from the beginning.
+For each fresh run, execute `.\.venv\Scripts\python.exe -m tools.reset_mini`. It deletes prior MINI cases, archives other journeys, and prepares one new Stornoway incident with no submitted report or photos. It verifies the application's actual initial email. Open the case URL and email subject printed by the command. Archived non-MINI cases remain accessible by their original links for read-only comparisons.
 
 ---
 
 ## 1. A customer is using a rental car
 
-**Story:** Alex is driving a rental car in London. Caldova can see the vehicle's operational state and connect it to the rental and branch.
+**Story:** Alex's green MINI Cooper is in Stornoway. Operations can see its location and connect it to the rental and home branch.
 
-**Open and do:** Start on the dashboard's **Overview**. Show the fleet map, select a London car, and show its location, speed, energy level and status. Optional: open the Fabric ontology **Caldova_Fleet_Digital_Twin** in **Full ontology** view for 20 seconds to show Vehicle → Branch and Rental → Vehicle. The full ontology walkthrough is in [step 14](#14-show-the-ontology-behind-the-case).
+**Open and do:** Start on **Overview**. Show 39 cars **On hire**, one MINI **Incident detected**, and its Stornoway location. The portal does not contain charging or low-battery distractions. Optional: show Vehicle → Branch and Rental → Vehicle in the Fabric ontology; the full walkthrough is in [step 14](#14-show-the-ontology-behind-the-case).
 
 **Feature:** Azure Maps; Fabric Eventhouse telemetry; Fabric IQ ontology and business context.
 
@@ -114,34 +114,35 @@ The current rule checks:
 
 **Story:** The customer is contacted proactively, with emergency guidance and a simple way to report the incident.
 
-**Open and do:** Open the incident and select **Open customer journey**. Show the phone-message preview:
+**Open and do:** Open the demo administrator's inbox in [Outlook](https://outlook.office.com/mail/), which also represents the customer inbox for this presentation. Find **`[case reference] [REPORT] Your secure incident report link`**, sent automatically from the claims mailbox after detection. Show the actual email's safety guidance, vehicle reference and reporting link, then open that link.
 
-> Caldova: We detected a possible impact involving your rental car. In an emergency call 999. When it is safe, use this link to report the incident.
+The same email is retained in the incident's **The actual correspondence** section. **Open customer journey** still shows the phone-message preview with the same link as an alternative entry point.
 
-Follow **Report your incident securely**.
+Use a case marked **Awaiting customer report**. Do not select **Simulate customer report** first: that submits the form automatically, after which the reporting page shows confirmation rather than an editable form.
 
-**Feature:** Event-driven customer engagement; a secure, expiring incident link.
+**Feature:** Event-driven customer engagement; real Microsoft 365 email; a secure, expiring incident link.
 
 **Say:** “The first message is about safety and help, not a complicated claims form. The customer can report what happened when it is safe to do so.”
 
-**Presenter detail:** The phone message is a preview. The link and the reporting site are real; no real SMS is sent.
+**Presenter detail:** The initial email is delivered to the explicitly configured demo inbox, not to addresses entered by a visitor. The phone message remains a preview; no real SMS is sent. Delivery receipts prevent repeated initial emails on every worker cycle.
 
 ## 5. The customer submits photos and an explanation
 
-**Story:** Alex confirms everyone is safe, adds a photo and describes what happened. The vehicle and case are already identified.
+**Story:** Alex checks the prefilled contact details, adds a photo and describes what happened. The vehicle and Stornoway incident location are already identified.
 
 **Open and do:** On the customer reporting page:
 
-1. Confirm it is safe to complete the report.
-2. Leave the injury checkbox clear for the main journey.
-3. Upload a bumper photo. A clear, ready-to-use damage image is `static\demo-assets\bumper-dent.jpg`.
-4. Enter an explanation such as:
+1. Review the editable name and email at the top: **Alex Morgan / alex.morgan@example.com**.
+2. For the green MINI Cooper **CD-006**, upload **`media\crash1.png`**. Add **`media\crash2.png`** to show the wider scene with two faces and demonstrate privacy masking.
+3. **What happened? starts empty.** Enter the customer's account in their own words, for example:
 
-   > “The rear bumper contacted a low bollard while reversing into a parking space. There is a dent and light paint scuffing on the plastic bumper. Nobody was injured and no other vehicle was involved.”
+   > “I scraped the front bumper while parking. The photograph shows the affected area.”
 
-5. Confirm permission to share the redacted repair brief, then submit.
+4. Confirm permission to share the redacted repair brief, then submit. The confirmation ends at the case reference; there are no safety or assistance checkboxes.
 
 **Feature:** Mobile evidence capture; prefilled case context; consent; protected uploads and evidence hashes.
+
+The weather panel uses Web IQ to search public sources for weather context around the incident. It shows source links and the search time, does not claim an exact station observation, and never fills in the customer's explanation. Search results may not verify historical conditions at the incident time.
 
 **Say:** “Alex tells the story once. We retain the original evidence securely and use a separate, privacy-processed version for the repair network.”
 
@@ -153,33 +154,37 @@ Follow **Report your incident securely**.
 
 **Feature:** Microsoft Foundry Agent Service; multimodal reasoning; privacy redaction and verification; structured report output.
 
+Face and text detectors place the masks using measured image coordinates before Foundry sees the image. Foundry does not guess mask positions. On a case awaiting evidence review, **Reprocess existing evidence** reruns the current pipeline while preserving the originals and previous assessment.
+
 **Say:** “The agent assembles a useful case, but it does not decide liability, insurance coverage or whether the vehicle is safe to drive. It records what is visible and what still needs inspection.”
 
 **Alternative branch:** For a separate inspection demonstration, use a fresh case with unclear or wider damage evidence. If Foundry routes it to **Evidence review required**, show that it has no quotation emails and cannot be approved automatically. The operator can request clearer evidence. Do not claim that the model has approved an image which it actually routed for review.
+
+**Current MINI photo:** the real assessment redacted the plate and requested inspection because it identified possible fender involvement. Use that result to demonstrate review and privacy controls. For the later quotation comparison, open the existing prepared quote case; do not imply it is an approved assessment of the new MINI photo.
 
 ## 7. The claims coordinator asks three repair centres for quotes
 
 **Story:** Before requesting quotes, the coordinator applies Caldova's repair policy. **RP-02** allows only new genuine OEM replacement parts; **RP-03** requires written parts evidence. The same privacy-cleared repair brief and policy go to all three approved centres.
 
-**Open and do:** First open the Word repair policy and highlight RP-02, RP-03 and RP-05. Then open **Caldova Repair Coordinator** in Copilot Studio. Show its instructions and approval boundary. Open the case's **The actual correspondence**, or **Sent Items** in the claims mailbox, and expand the three `[RFQ]` messages. Show the attached repair brief and the policy link/clauses included with the request.
+**Open and do:** Open the Word policy and highlight RP-02, RP-03 and RP-05. In Copilot Studio, show the coordinator's instructions and supplied policy context. Then open **The actual correspondence** and the original `[RFQ]` Outlook messages with their repair brief and policy link.
 
-**Feature:** A real Copilot Studio agent; grounded RFQ generation; real Microsoft 365 email delivery.
+**Feature:** Secured Studio agent generation, app-supplied controlled policy, and real Microsoft 365 email receipts.
 
 **Say:** “The business rule lives in a real Word document. Being an approved supplier does not make every offer compliant: the centre must explicitly tell us what parts it proposes.”
 
-**Implementation detail:** A Graph inbox adapter connects the real mailboxes to the published Copilot Studio agents. Do not describe this adapter as a native Outlook connector trigger.
+**Implementation detail:** The application supplies policy, invokes the Studio agents and delivers validated messages. The retained Foundry repair functions are not the running path. This is not a native Outlook connector trigger.
 
 ## 8. The three centres respond with different trade-offs
 
 **Story:** Alder is both cheapest and fastest, but proposes a new **aftermarket/non-OEM** bumper cover. Metro offers new genuine OEM parts with priority access. Riverside offers new genuine OEM parts at a lower repair price than Metro, but a later completion date.
 
-**Open and do:** Show the three `[QUOTE]` replies in the case. Open **Metro Rapid Repair** in Copilot Studio to show that it is an actual agent using its own rate and availability rules.
+**Open and do:** Show the three `[QUOTE]` replies. Open Metro in Copilot Studio to show its own rate and availability instructions. Each agent preserves its supplied offer exactly; the application validates and delivers the response.
 
 | Centre | Agent | Shared mailbox |
 | --- | --- | --- |
-| Alder Bodyworks | [Open in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/808cb5b3-a41d-45b3-92bd-35819f5f6789/overview) | `alder.repairs@caldova08667473.onmicrosoft.com` |
-| Metro Rapid Repair | [Open in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/988bbfcb-a31e-4a36-8d4b-ea88da60f225/overview) | `metro.repairs@caldova08667473.onmicrosoft.com` |
-| Riverside Auto Care | [Open in Copilot Studio](https://copilotstudio.microsoft.com/environments/Default-b6883271-971b-4198-92a5-8ad615765572/bots/e9317e40-0ecc-4ccd-a167-a692f75373ee/overview) | `riverside.repairs@caldova08667473.onmicrosoft.com` |
+| Alder Bodyworks | Studio: `cdv_alderrepairs` | `alder.repairs@caldova08667473.onmicrosoft.com` |
+| Metro Rapid Repair | Studio: `cdv_metrorepairs` | `metro.repairs@caldova08667473.onmicrosoft.com` |
+| Riverside Auto Care | Studio: `cdv_riversiderepairs` | `riverside.repairs@caldova08667473.onmicrosoft.com` |
 
 **Feature:** Real agent-to-workflow interaction, independently configured supplier responses, actual email threads and structured quote extraction.
 
@@ -341,11 +346,14 @@ Work IQ indexing is asynchronous. If the new document or emails are not yet retr
 
 | Case | Open it for |
 | --- | --- |
+| [CDI-4170F5EC25](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-4170F5EC25) | Green MINI Cooper in Stornoway, CD-006; reporting email, editable contact prefills, empty explanation and weather context |
 | [CDI-008FC82110](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-008FC82110) | Volvo EX30; OEM policy comparison, Work IQ question and live approval moment |
 | [CDI-EDB4612D4F](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-EDB4612D4F) | Volkswagen Golf; completed genuine-OEM booking with matching approved/confirmed quotation fingerprints |
 | [CDI-E277BBAC5C](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-E277BBAC5C) | Earlier completed Polestar booking; historical terms preserved |
 
 For a fresh reporting journey, choose another vehicle without an incident. Earlier case IDs in the implementation history are archived verification records, not current prepared cases after the fleet reset.
+
+Use a matching photograph for other cars. The supplied MINI picture and automatic customer-report action belong to CD-006 only.
 
 ## Product names to use accurately
 
@@ -354,7 +362,7 @@ For a fresh reporting journey, choose another vehicle without an incident. Earli
 | Detect a telemetry condition | **Fabric Real-Time Intelligence / Activator** |
 | Relate vehicle, rental, incident and quotation facts | **Fabric IQ ontology and data bindings** |
 | Analyse photos and prepare the privacy-processed report | **Microsoft Foundry Agent Service** |
-| Generate RFQs, supplier replies and recommendations | **Copilot Studio agents** |
+| Generate RFQs, supplier replies and recommendations | **Copilot Studio agents with app-supplied policy and app-managed email** |
 | Move and monitor the actual emails | **Microsoft Graph inbox adapter** |
 | Ask questions over governed operational tables | **Fabric data agent / Caldova Fleet IQ** |
 | Find and cite the operator's email context | **Work IQ in Microsoft 365 Copilot** |

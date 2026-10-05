@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 
 from azure.ai.projects import AIProjectClient
@@ -14,30 +15,49 @@ from tools.cloud import Cloud, CONFIG, ROOT, az, load_state, save_state
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--agent-only", action="store_true", help="Publish evidence instructions without changing the existing Foundry resources or model allocation.")
+    parser.add_argument("--base-version", help="Preserve configuration from this existing version when publishing instructions only.")
+    args = parser.parse_args()
+    if args.base_version and not args.agent_only:
+        parser.error("--base-version requires --agent-only")
     cloud, state = Cloud(), load_state()
-    account = CONFIG["resource_prefix"] + "-foundry"
-    deployment = az(
-        "deployment", "group", "create", "--name", "caldova-foundry",
-        "--resource-group", CONFIG["resource_group"], "--subscription", CONFIG["subscription_id"],
-        "--template-file", str(ROOT / "infra" / "foundry.bicep"),
-        "--parameters", f"accountName={account}", f"location={CONFIG['location']}",
-        f"runtimePrincipalId={state['appIdentity']}", f"operatorPrincipalId={CONFIG['admin_object_id']}",
-    )
-    output = {key: item["value"] for key, item in deployment["properties"]["outputs"].items()}
-    project_info = az(
-        "cognitiveservices", "account", "project", "show", "--name", account,
-        "--resource-group", CONFIG["resource_group"], "--subscription", CONFIG["subscription_id"],
-        "--project-name", output["foundryProjectName"],
-    )
-    endpoint = project_info["properties"]["endpoints"]["AI Foundry API"]
+    if args.agent_only:
+        account = state["foundry_account_name"]
+        output = {
+            "accountId": state["foundry_account_id"], "projectId": state["foundry_project_id"],
+            "foundryProjectName": state["foundry_project_name"], "modelDeployment": state["foundry_model_deployment"],
+        }
+        endpoint = state["foundry_project_endpoint"]
+    else:
+        account = CONFIG["resource_prefix"] + "-foundry"
+        deployment = az(
+            "deployment", "group", "create", "--name", "caldova-foundry",
+            "--resource-group", CONFIG["resource_group"], "--subscription", CONFIG["subscription_id"],
+            "--template-file", str(ROOT / "infra" / "foundry.bicep"),
+            "--parameters", f"accountName={account}", f"location={CONFIG['location']}",
+            f"runtimePrincipalId={state['appIdentity']}", f"operatorPrincipalId={CONFIG['admin_object_id']}",
+        )
+        output = {key: item["value"] for key, item in deployment["properties"]["outputs"].items()}
+        project_info = az(
+            "cognitiveservices", "account", "project", "show", "--name", account,
+            "--resource-group", CONFIG["resource_group"], "--subscription", CONFIG["subscription_id"],
+            "--project-name", output["foundryProjectName"],
+        )
+        endpoint = project_info["properties"]["endpoints"]["AI Foundry API"]
     with AIProjectClient(endpoint=endpoint, credential=cloud.credential) as project:
-        agent = project.agents.create_version(
-            agent_name=AGENT_NAME,
-            definition=PromptAgentDefinition(
-                model=output["modelDeployment"], instructions=AGENT_INSTRUCTIONS,
-                temperature=0,
+        if args.agent_only:
+            definition = project.agents.get_version(
+                agent_name=AGENT_NAME, agent_version=args.base_version or state["foundry_agent_version"],
+            ).definition
+            definition.instructions = AGENT_INSTRUCTIONS
+        else:
+            definition = PromptAgentDefinition(
+                model=output["modelDeployment"], instructions=AGENT_INSTRUCTIONS, temperature=0,
                 text=PromptAgentDefinitionTextOptions(format=TextResponseFormatJsonObject()),
-            ),
+            )
+        agent = project.agents.create_version(
+            agent_name=AGENT_NAME, definition=definition,
         )
         project.agents.update_details(
             agent_name=AGENT_NAME,

@@ -20,7 +20,7 @@ def main() -> None:
     missing = set(CONTENT_SCOPES) - scopes.keys()
     if missing:
         raise RuntimeError(f"Required Graph delegated permissions are unavailable: {missing}")
-    name = "Caldova IQ Content Studio"
+    name = "Fleet IQ Content Studio"
     applications = cloud.pages(GRAPH + f"/applications?$filter=displayName eq '{name}'")
     configuration = {
         "displayName": name,

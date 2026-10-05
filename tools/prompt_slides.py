@@ -5,6 +5,8 @@ import json
 import re
 from pathlib import Path
 
+from tools.render_media_story import render_media_story
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -86,9 +88,9 @@ def build() -> str:
         "riverside": ("Riverside Auto Care", "riverside.repairs@", "Balanced price and availability", [r"Present the balanced cost and workshop-availability option\.", r"12-month warranty"]),
     }
     slides = [slide(
-        1, "foundry", "Microsoft Foundry Agent Service", "Evidence agent", "Incident evidence · v2 · GPT-4.1 vision",
+        1, "foundry", "Microsoft Foundry Agent Service", "Evidence agent", "Incident evidence · GPT-4.1 vision",
         [("Wakes", "Customer submits photos + explanation"),
-         ("Does", "3 calls per photo set: inspect → verify redaction → write the garage-facing brief"),
+         ("Does", "A local detector places face masks; Foundry inspects the photo, checks remaining privacy risks and writes the brief"),
          ("Two prompt layers", "Agent instructions live in Foundry; each call adds a task prompt with the exact JSON shape"),
          ("Output checked", "Strict schema validation; unclear privacy or non-cosmetic damage → human review"),
          ("Never", "Liability, coverage, roadworthiness, email, bookings")],
@@ -97,11 +99,11 @@ def build() -> str:
         small=True,
     ), slide(
         2, "studio", "Copilot Studio", "Claims coordinator", "Repair coordinator · claims mailbox",
-        [("Wakes", "A: brief ready → write the quote request<br>B: three quotes in → recommend"),
-         ("Called by", "The operations app, over Direct Line with a protected channel secret"),
-         ("Output checked", "Parts eligibility first, then cost. The pick, excluded IDs and policy version must match the app"),
-         ("Then", "Operator keeps the pick or chooses another compliant quote with a reason"),
-         ("Never", "Sends email or books. The app does that after approval")],
+        [("Wakes", "Brief ready → quotation request<br>Three quotes → recommendation"),
+         ("Reads", "Versioned repair policy and evidence supplied by the application"),
+         ("Does", "Drafts the RFQ and recommends the best compliant quotation"),
+         ("Email", "The application sends reviewed messages through scoped Exchange access"),
+         ("Human gate", "Only recorded operator approval permits booking; the app rechecks policy and quote terms")],
         [("Agent instructions · Copilot Studio", render(studio("coordinator")))],
         small=True,
     )]
@@ -110,9 +112,9 @@ def build() -> str:
             i, "studio", "Copilot Studio · repair centre", name, f"{key} · {mailbox}",
             [("Wakes", "An email lands in its own shared mailbox"),
              ("Position", pitch),
-             ("Quote", "Uses only the trusted rate card + capacity the app supplies; must copy the offer exactly"),
+             ("Quote", "Uses the supplied policy, rate card and capacity; preserves its own trusted offer exactly"),
              ("Booking", "Only compliant parts + recorded operator approval; exact quotation fingerprint confirmed"),
-             ("Output checked", "Parts, price, dates, policy version and garage ID before the reply is sent")],
+             ("Delivery", "The application validates and sends the reply from the approved shared mailbox")],
             [("Agent instructions · Copilot Studio", render(studio(key), diffs))],
             small=True,
         ))
@@ -181,6 +183,8 @@ DECK_CSS = """
   .deck-nav { position: fixed; bottom: 12px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 10px; color: #7d8cab; font-size: 13px; font-weight: 600; }
   .deck-nav button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #cfd7e6; background: #fff; color: #3b4762; font-size: 18px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px #17203314; }
   .deck-nav button:hover { border-color: #2470d6; color: #2470d6; }
+  .deck-nav a { color:#52677d; text-decoration:none; margin-right:8px; }
+  .deck-nav a:hover { color:#117865; text-decoration:underline; }
   .hint { display: none; }
   .pslide footer { padding-right: 150px; }
   @media print { .pslide, .xframe, .deck-nav { display: none; } }
@@ -191,9 +195,9 @@ DECK_JS = """
   const deckAgents = __AGENTS__;
   const deckPrompts = [...document.querySelectorAll(".pslide")];
   const deckFrames = Object.fromEntries([...document.querySelectorAll(".xframe")].map(f => [f.dataset.id, f]));
-  const deckSeq = [{ frame: "intro" }, { frame: "agents" }, { mode: "tech" }];
+  const deckSeq = [{ frame: "intro" }, { mode: "biz" }, { mode: "tech" }, { frame: "agents" }];
   deckAgents.forEach((a, k) => deckSeq.push({ mode: "tech", agent: k }, { mode: "tech", agent: k, prompt: true }));
-  deckSeq.push({ mode: "tech" }, { frame: "iq" }, { frame: "kinds" }, { mode: "biz" });
+  deckSeq.push({ mode: "tech" }, { frame: "iq" }, { frame: "kinds" });
   let deckAt = -1, flowSeen = false;
   const deckFit = () => document.documentElement.style.setProperty("--s", Math.min(innerWidth / 1600, innerHeight / 900));
   const replayFlow = () => {
@@ -224,45 +228,72 @@ DECK_JS = """
     }
   };
   addEventListener("keydown", e => {
-    const fwd = [" ", "ArrowRight", "ArrowDown", "Enter", "PageDown"].includes(e.key), back = ["ArrowLeft", "ArrowUp", "Backspace", "PageUp"].includes(e.key);
-    if (e.key === "Home" || e.key === "End") { e.preventDefault(); e.stopImmediatePropagation(); deckShow(e.key === "Home" ? 0 : deckSeq.length - 1); return; }
+    const fwd = ["ArrowRight", "ArrowDown"].includes(e.key), back = ["ArrowLeft", "ArrowUp"].includes(e.key);
     if (!fwd && !back) return;
     e.preventDefault(); e.stopImmediatePropagation();
     deckShow(deckAt + (fwd ? 1 : -1));
-  }, true);
-  addEventListener("click", e => {
-    e.stopPropagation();
-    const nav = e.target.closest("[data-nav]");
-    deckShow(deckAt + (nav ? +nav.dataset.nav : 1));
   }, true);
   addEventListener("resize", deckFit); deckFit();
   deckShow((parseInt(location.hash.slice(1)) || 1) - 1);
 </script>
 """
 
+LASER_CSS = """
+  html.laser-active, html.laser-active * { cursor: none !important; }
+  .laser-pointer { position: fixed; left: 0; top: 0; width: 10px; height: 10px; margin: -5px;
+    border-radius: 50%; background: #fff0f0; border: 2px solid #ff2438;
+    box-shadow: 0 0 6px 3px #ff2438cc, 0 0 20px 8px #ff243855;
+    pointer-events: none; z-index: 2147483647; display: none; }
+  html.laser-active .laser-pointer { display: block; }
+  @media print { .laser-pointer { display: none !important; } }
+"""
+
+LASER_JS = """
+<script>
+  (() => {
+    const pointer = document.createElement("div");
+    pointer.className = "laser-pointer";
+    pointer.setAttribute("aria-hidden", "true");
+    document.body.append(pointer);
+    const mouse = matchMedia("(hover: hover) and (pointer: fine)");
+    const hide = () => document.documentElement.classList.remove("laser-active");
+    document.addEventListener("pointermove", e => {
+      if (e.pointerType !== "mouse" || !mouse.matches) { hide(); return; }
+      pointer.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+      document.documentElement.classList.add("laser-active");
+    });
+    document.documentElement.addEventListener("pointerleave", hide);
+    document.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") hide(); });
+    addEventListener("blur", hide);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) hide(); });
+    mouse.addEventListener("change", hide);
+  })();
+</script>
+"""
+
 FRAMES = """
 <iframe class="xframe" data-id="iq" src="iq.html" tabindex="-1" title="Microsoft IQ"></iframe>
 <iframe class="xframe" data-id="kinds" src="agent-kinds.html" tabindex="-1" title="Personal agents vs Always-on agents"></iframe>
-<iframe class="xframe" data-id="intro" src="intro.html" tabindex="-1" title="The insurance operation"></iframe>
+<iframe class="xframe" data-id="intro" src="intro.html" tabindex="-1" title="From incident to repair"></iframe>
 <iframe class="xframe" data-id="agents" src="agents.html" tabindex="-1" title="Agents and triggers"></iframe>
-<div class="deck-nav"><button data-nav="-1" aria-label="Previous">‹</button><span id="deckPos"></span><button data-nav="1" aria-label="Next">›</button></div>
+<div class="deck-nav"><a href="mediastory.html">Media story</a><span id="deckPos"></span></div>
 """
 
 def prompts_page(slides: str) -> str:
-    return TEMPLATE.replace("{{CSS}}", PROMPT_CSS).replace("{{SLIDES}}", slides)
+    return TEMPLATE.replace("{{CSS}}", PROMPT_CSS + LASER_CSS).replace("{{SLIDES}}", slides).replace("</body>", LASER_JS + "</body>")
 
 
 def deck_page(slides: str) -> str:
     flow = (ROOT / "docs" / "flow-animated.html").read_text(encoding="utf-8")
-    hint = '<div class="hint">Space / click = show who does it · ← back · F = full screen · P = print</div>'
+    hint = '<div class="hint">← / → = switch view · F = full screen · P = print</div>'
     for needle in ("</style>", hint, "</body>", "<title>"):
         if needle not in flow:
             raise ValueError(f"flow-animated.html changed; missing {needle!r}")
     flow = re.sub(r"<title>.*?</title>", "<title>From incident to repair</title>", flow)
-    flow = flow.replace("</style>", PROMPT_CSS + DECK_CSS + "</style>", 1)
+    flow = flow.replace("</style>", PROMPT_CSS + DECK_CSS + LASER_CSS + "</style>", 1)
     flow = flow.replace(hint, slides + FRAMES, 1)
     js = DECK_JS.replace("__AGENTS__", json.dumps(AGENTS))
-    return flow.replace("</body>", js + "</body>", 1)
+    return flow.replace("</body>", js + LASER_JS + "</body>", 1)
 
 
 TEMPLATE = """<!DOCTYPE html>
@@ -289,7 +320,7 @@ TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
 {{SLIDES}}
-<div class="hint">← → / Space = next agent · F = full screen · P = print all</div>
+<div class="hint">← → = previous / next agent · F = full screen · P = print all</div>
 <script>
   const slides = [...document.querySelectorAll(".pslide")];
   let i = Math.min(Math.max((parseInt(location.hash.slice(1)) || 1) - 1, 0), slides.length - 1);
@@ -297,12 +328,11 @@ TEMPLATE = """<!DOCTYPE html>
   const show = n => { i = (n + slides.length) % slides.length; slides.forEach((s, k) => s.classList.toggle("on", k === i)); history.replaceState(null, "", `#${i + 1}`); };
   addEventListener("resize", fit); fit(); show(i);
   addEventListener("keydown", e => {
-    if ([" ", "ArrowRight", "PageDown", "Enter"].includes(e.key)) { e.preventDefault(); show(i + 1); }
-    if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    if (["ArrowRight", "ArrowDown"].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    if (["ArrowLeft", "ArrowUp"].includes(e.key)) { e.preventDefault(); show(i - 1); }
     if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     if (e.key === "p" || e.key === "P") print();
   });
-  addEventListener("click", () => show(i + 1));
 </script>
 </body>
 </html>
@@ -311,7 +341,12 @@ TEMPLATE = """<!DOCTYPE html>
 
 if __name__ == "__main__":
     slides = build()
-    for name, page in (("prompts.html", prompts_page(slides)), ("index.html", deck_page(slides))):
+    media_story = (ROOT / "docs" / "mediastory.md").read_text(encoding="utf-8")
+    for name, page in (
+        ("prompts.html", prompts_page(slides)),
+        ("index.html", deck_page(slides)),
+        ("mediastory.html", render_media_story(media_story)),
+    ):
         target = ROOT / "docs" / name
         target.write_text(page, encoding="utf-8")
         print(target)

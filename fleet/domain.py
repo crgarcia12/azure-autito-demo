@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, model_validator
+from fleet.demo_case import VEHICLE_DETAILS, VEHICLE_ID
 
 BRANCHES = [
     {"BranchId": "LON", "BranchName": "London Heathrow", "City": "London", "Latitude": 51.4713, "Longitude": -0.4524, "Count": 16,
@@ -85,7 +86,10 @@ def fleet_vehicles() -> list[dict]:
                 "BaseOdometerKm": float(8000 + index * 733),
                 "ServiceDueKm": float(85000 + index * 1000),
                 "Index": index,
+                "Colour": "", "RegisterVersion": 1,
             })
+            if vehicles[-1]["VehicleId"] == VEHICLE_ID:
+                vehicles[-1].update(VEHICLE_DETAILS)
     return vehicles
 
 
@@ -174,16 +178,8 @@ class VehicleMotion:
         latitude, longitude, heading = self.route.position(progress * self.route.length_km if driving else 0)
         index = self.vehicle["Index"]
         electric = self.vehicle["Powertrain"] == "Electric"
-        status = "on-hire" if driving else ("charging" if electric else "available")
-        if index in {13, 33}:
-            status = "maintenance"
-        charge = max(7, 91 - progress * 24 - (index % 9) * 4)
-        if index == 8:
-            charge = max(8, 18 - progress * 7)
-        pressure = 1.72 if index == 21 else round(2.35 + .12 * math.sin(index + progress), 2)
-        alert = "Maintenance required" if status == "maintenance" else (
-            "Low tyre pressure" if pressure < 1.9 else ("Low battery" if electric and charge < 20 else "")
-        )
+        charge = 91 - progress * 24 - (index % 9) * 4
+        pressure = round(2.35 + .12 * math.sin(index + progress), 2)
         return Telemetry(
             EventId=str(uuid.uuid5(EVENT_NAMESPACE, f"{self.vehicle['VehicleId']}:{utc_text(start)}:{utc_text(end)}")),
             VehicleId=self.vehicle["VehicleId"], IntervalStart=start, Timestamp=end,
@@ -195,6 +191,6 @@ class VehicleMotion:
             BatteryPct=round(charge, 1) if electric else None,
             FuelPct=None if electric else round(max(12, 88 - progress * 22 - index % 6 * 4), 1),
             TyrePressureBar=pressure, EngineTempC=round(23 + (46 if electric else 65) * progress, 1),
-            Status=status, Alert=alert, BranchId=self.vehicle["BranchId"],
-            RouteId=self.route.route_id, RentalId=f"R-{index + 10401}" if driving else "",
+            Status="on-hire", Alert="", BranchId=self.vehicle["BranchId"],
+            RouteId=self.route.route_id, RentalId=f"R-{index + 10401}",
         )

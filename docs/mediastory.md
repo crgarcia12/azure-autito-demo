@@ -3,7 +3,8 @@
 **Sales narrative with screen-by-screen pitch and visuals**
 
 **Audience:** insurance executives, claims leaders, architects and technical staff.  
-**Length:** 12-15 minutes, followed by technical questions.  
+**Length:** 10 minutes, followed by technical questions.
+
 **Opening sequence:** the business operation, the agents we add, then the product lanes.
 
 ## The pitch in 30 seconds
@@ -12,13 +13,15 @@
 
 Three ideas should remain with the audience: **less coordination effort, better-informed repair decisions, and control that remains visible.**
 
-The images below are actual presentation and demo captures, not mock-ups. Slide captures are current; application captures show recorded runs. The [capture register](#capture-register) identifies their dates and cases. Use the live application for current status.
+The images below are actual presentation and demo captures, not mock-ups. The [capture register](#capture-register) identifies their dates and cases. Use the live application for current status and **The actual correspondence** for the real emails.
+
+Before presenting, run `.\.venv\Scripts\python.exe -m tools.reset_mini`. It prepares 39 cars On hire and one green MINI incident in Stornoway, sends the real initial email through the application, and leaves the customer report unsubmitted. The command prints the current case link and email subject.
 
 ---
 
 ## 1. Start with the operation, not the technology
 
-**Time:** 1 minute. **Audience:** everyone.
+**Time:** 45 seconds. **Audience:** everyone.
 
 **Open:** [Presentation, slide 1](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#1).
 
@@ -36,9 +39,9 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 ## 2. Introduce the agents as useful business roles
 
-**Time:** 1 minute. **Audience:** executives first; technical staff second.
+**Time:** 30 seconds. **Audience:** executives first; technical staff second.
 
-**Open:** [Presentation, slide 2](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#2).
+**Open:** [Presentation, agent overview](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#4).
 
 **Say:**
 
@@ -50,19 +53,19 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 *Published presentation: the agent roles and their orchestration.*
 
-**Technical cue:** the main journey uses one Foundry evidence agent, four Copilot Studio agents and one Fabric data agent. Telemetry detection is a rule and pipeline, not another AI agent. A separate customer-report agent is a presenter convenience, not part of this six-role pitch.
+**Technical cue:** the main journey uses one Foundry evidence agent, four Copilot Studio repair agents, and one Fabric data agent. The application supplies the controlled policy and delivers validated emails. Telemetry detection is a rule and pipeline, not another AI agent.
 
 **Transition:** "Where should these responsibilities run, and where does each get its context?"
 
 ## 3. Put the roles into the Microsoft architecture
 
-**Time:** 1 minute. **Audience:** both groups.
+**Time:** 45 seconds. **Audience:** both groups.
 
 **Open:** [Presentation, slide 3: product lanes](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#3).
 
 **Say:**
 
-> "The lanes separate responsibilities. Fabric detects the operational signal and holds the business facts. Foundry handles the photographic evidence. Copilot Studio supports the repair correspondence and recommendation. The customer contributes evidence and the manager authorises the choice. The value is the connected process, with a clear boundary around every action."
+> "Fabric holds the operational facts. Foundry prepares the photographic evidence. Copilot Studio agents draft and compare the repair offers, and the application delivers the correspondence. The manager retains authority. Work IQ lets us independently ask about the policy and what suppliers actually said."
 
 **Point to:** the path across the lanes, then pause on the human approval gate. Do not read every box aloud.
 
@@ -70,15 +73,15 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 *Published presentation: implementation responsibilities, not a claim that the agents call one another directly.*
 
-**Technical cue:** an application worker coordinates the case. Native Studio agents are invoked through secured Direct Line channels; a Graph inbox adapter moves the actual emails. The ontology describes business relationships; application checks enforce booking eligibility.
+**Technical cue:** the active runtime is the restored app-managed flow: secured Direct Line calls to Studio, controlled policy supplied in context, and scoped Exchange transport with immutable receipts. Foundry repair functions are retained but are not the active path.
 
 **Transition:** "Let us follow one incident through that architecture."
 
 ## 4. Show that the incident belongs to a real operation
 
-**Time:** 1 minute. **Audience:** executives.
+**Time:** 45 seconds. **Audience:** executives.
 
-**Open:** [Live fleet dashboard](https://caldovadrive08667473.azurewebsites.net/). Select a vehicle and inspect its state. For a predictable presentation, move next to the [prepared repair case](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-008FC82110).
+**Open:** [Live fleet dashboard](https://caldovadrive08667473.azurewebsites.net/). Show 39 cars **On hire** and one **Incident detected**. Select the green MINI in Stornoway and open its incident.
 
 **Say:**
 
@@ -98,25 +101,31 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 **Time:** 45 seconds. **Audience:** executives and customer-experience leaders.
 
-**Open:** the incident's **Open customer journey** view. Show the secure reporting page without submitting or replacing the prepared evidence.
+**Open:** [Outlook](https://outlook.office.com/mail/) in the demo administrator's session, which represents the customer inbox for this presentation. Find **`[case reference] [REPORT] Your secure incident report link`** and open its reporting link. Show the actual customer website without submitting the form during preparation.
+
+Use a new case marked **Awaiting customer report**. **Open customer journey** on the incident exposes the same link. Do not use **Simulate customer report** first; that submits the form and changes the customer page to a confirmation screen.
+
+For the current upload demonstration, select **CD-006, the green MINI Cooper**, and use **`media\crash1.png`**. Do not attach that photograph to a different car. The customer-report simulator is restricted to this matching vehicle.
+
+Live entry point: [the current MINI incident](https://caldovadrive08667473.azurewebsites.net/#incidents). Use the case and `[REPORT]` subject printed by the reset command. Previous MINI cases are deleted by reset; other journeys are retained as archived runs.
 
 **Say:**
 
-> "The customer gets one clear next step: confirm they are safe, add photos and explain what happened. They do not need to reconstruct the vehicle details for several different teams. We collect the account once and use it to prepare the repair process."
+> "The customer checks their contact details, adds photos and explains what happened. They do not need to reconstruct the vehicle details for several teams. Web search can provide weather context, but the customer's account remains their own."
 
-**Point to:** safety confirmation and the photo-upload control.
+**Point to:** the editable name/email at the top, the photo-upload control and the **empty What happened? field**. Weather never inserts a rain claim into the explanation.
 
-<img src="media/insurance-pitch/05-customer-report.png" alt="Actual mobile intake controls for safety confirmation and secure incident-photo upload." width="390">
+<img src="media/insurance-pitch/05-customer-report.png" alt="Actual Stornoway customer form with contact prefills, photo upload, an empty explanation and separate weather context." width="390">
 
-*Recorded mobile intake interface; a separate capture of the customer experience, not a second photo set for the prepared repair case.*
+*Actual unsubmitted MINI reporting form, opened using the link from its initial customer email.*
 
-**Technical cue:** the reporting link is expiring and capability-based. The phone message is a preview; the link, upload and consent flow are real. Unsafe or injury-related reports leave the routine procurement path for assistance.
+**Technical cue:** the initial notification is a real email to the configured customer inbox. The reporting link is expiring and capability-based. Delivery is idempotent and recorded on the case. Safety and assistance questions are omitted, without inventing answers; the acknowledgement ends at the case reference. Web IQ searches public sources and returns links; its results are not treated as verified observations for the exact incident time.
 
 **Transition:** "The insurer now has evidence. The next challenge is turning it into a useful, shareable brief."
 
 ## 6. Turn evidence into a decision-ready repair brief
 
-**Time:** 1 minute. **Audience:** both groups.
+**Time:** 45 seconds. **Audience:** both groups.
 
 **Open:** **Incident evidence** and **Repair brief PDF** in the [prepared case](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-008FC82110). If asked, open [Foundry](https://ai.azure.com/) and the configured evidence agent.
 
@@ -130,7 +139,9 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 *Actual prepared case: evidence and repair brief, cropped without changing the content.*
 
-**Technical cue:** this is **Foundry Agent Service**, not Foundry IQ retrieval. The workflow validates structured responses and records model-response provenance. This particular photo has no visible identity to mask, so the copies look similar; do not claim that it demonstrates a face or registration being removed.
+**Technical cue:** this is **Foundry Agent Service**, not Foundry IQ retrieval. Local face/text detectors place the masks; Foundry reviews the already-masked image and checks for remaining identifying content. Structured responses and detector/model provenance are recorded. The archived photo below is not the current two-person MINI image.
+
+**Current upload photo:** the green MINI image does contain a readable plate. An actual assessment masked the plate but requested inspection because of possible fender involvement. Preserve any such review result. The screenshot above and the linked previous quote case are archived comparison evidence, not a reclassification of the new MINI image.
 
 **Transition:** "Now comes the decision that makes this more than a productivity demo."
 
@@ -138,7 +149,7 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 **Time:** 2 minutes. **Audience:** claims leadership, finance, risk and technology.
 
-**Open:** **Repair options**. Show the Word policy link, the three offers and the downtime slider.
+**Open:** **The actual correspondence** and the original Outlook messages, then the Word policy link, three offers and downtime slider. If inspection is required, use the archived comparison without claiming that the new report was cleared.
 
 **Say:**
 
@@ -164,9 +175,9 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 ## 8. Keep authority with the manager
 
-**Time:** 1 minute. **Audience:** executives and risk leaders.
+**Time:** 1 minute 15 seconds. **Audience:** executives and risk leaders.
 
-**Open:** the recommendation and **Approve & book** control. Use the [separately completed case](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-EDB4612D4F) to show confirmation without consuming the prepared approval moment.
+**Open:** the current recommendation and **Approve & book** control only after all quotations and agent review are ready. Show the actual booking email and subsequent garage confirmation. The [archived completed case](https://caldovadrive08667473.azurewebsites.net/#incidents?case=CDI-EDB4612D4F) remains a read-only example if the live case needs inspection.
 
 **Say:**
 
@@ -184,7 +195,7 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 ## 9. Show Work IQ connecting policy to what the supplier actually said
 
-**Time:** 2 minutes. **Audience:** everyone. This is the second key proof point.
+**Time:** 1 minute 30 seconds. **Audience:** everyone. This is the second key proof point.
 
 **Open:** [The verified Microsoft 365 Copilot conversation](https://m365.cloud.microsoft/chat/conversation/da2d62d2-7c44-4d87-bad6-68aecbc648c0?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572), with **Work IQ enabled**. Open the Word-policy citation and the supplier-email citations.
 
@@ -206,7 +217,7 @@ The images below are actual presentation and demo captures, not mock-ups. Slide 
 
 ## 10. Close on the platform opportunity, then propose a measurable pilot
 
-**Time:** 1-2 minutes. **Audience:** executives, then the technical sponsor.
+**Time:** 1 minute. **Audience:** executives, then the technical sponsor.
 
 **Open:** [Microsoft IQ overview slide](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/iq.html).
 
@@ -239,18 +250,18 @@ Agree targets with the insurer before the pilot. Do not extrapolate the single-c
 
 | Question | Answer for this demo |
 | --- | --- |
-| What is actually live? | Fabric telemetry and tables, ontology and graph, Foundry evidence processing, native Studio agents, real internal quotation/booking emails, operator approval, and Work IQ retrieval. |
+| What is actually live? | Fabric telemetry and tables, ontology and graph, Foundry evidence processing, secured Studio repair agents, app-managed policy/email delivery, real mailbox receipts and operator approval. Work IQ is demonstrated independently in Microsoft 365 Copilot. |
 | Is the ontology powering the chatbot directly? | The ontology and graph model the business relationships. The published data agent queries the governed Lakehouse tables used by that model; direct ontology-source attachment is not part of the current path. |
 | Does Foundry IQ inspect the photo? | No. Foundry Agent Service runs the evidence agent. Foundry IQ is managed knowledge retrieval and a separate expansion discussion. |
 | Does the Word document alone block a booking? | No. The Word policy and machine-readable policy share a controlled source. The application evaluates the structured parts declarations and revalidates the approved quote and policy. |
-| Can an agent email a garage by itself? | The native agent returns validated content. The application sends and receives actual messages through scoped Graph mailbox access. This is not a native Outlook event-trigger integration. |
+| Can an agent email a garage by itself? | In the active implementation, the agent produces structured content and the app validates and sends it through scoped Exchange access. The experimental Foundry functions were retained but rolled out of the running workflow at the user's request. |
 | Can the model approve an ineligible offer? | Its output is checked. The API rejects prohibited parts, including an attempted human override. No eligible offers means review, not a default winner. |
 | Does this prove production claim-cycle reduction? | No. The prepared run reached a recommendation in 210.44 seconds; a separate run completed booking in 289.06 seconds using configured supplier offers and real services. They are demo execution timings, not production SLAs or comparative benchmarks. |
 | What needs a production design? | Insurer-specific policies, claims-system integration, consent and retention, roles, supplier onboarding, operational resilience, evaluations, service availability and licensing for the selected capabilities. |
 
 ## Presenter preparation
 
-Open the [deck at slide 1](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#1), the prepared repair case, the completed case and the verified Work IQ conversation in **the existing demo administrator's Work 2 browser profile**. Start with the business-process slide, then agent roles, then lanes; do not start in a cloud resource portal.
+Run the MINI reset command, then open the [deck at slide 1](https://wonderful-meadow-09d52640f.5.azurestaticapps.net/#1), the newly printed case, its actual customer email and the verified Work IQ conversation in **the existing demo administrator's Work 2 browser profile**. Start with the business process, then the live MINI; do not start in a cloud resource portal.
 
 Confirm Fabric is active, the dashboard has fresh data, and the prepared quotation is still valid before the meeting. Inspect source citations and policy access. Do not click **Approve & book** while rehearsing if the same case must remain available for the live decision.
 
@@ -264,14 +275,14 @@ All ten image files are stored alongside this document under `media/insurance-pi
 
 | Images | Source | Capture context |
 | --- | --- | --- |
-| 01-03 | Published business slide, agent overview and product lanes | Captured 4 October 2026 |
-| 04 | Recorded fleet-dashboard screenshot | 30 September 2026; use current app values when live |
-| 05 | Recorded customer-intake screenshot | 1 October 2026; interface reference, separate from the prepared case |
+| 01-03 | Business slide, restored Studio-agent overview and product lanes | Captured 5 October 2026 from the presentation sources |
+| 04 | Operational fleet dashboard: 39 On hire and one MINI incident | 5 October 2026; authenticated hosted capture with live Fabric data |
+| 05 | Actual Stornoway MINI customer form opened from its reporting email | Case CDI-CF6D654773; editable contact prefills and an empty explanation |
 | 06-08 | Recorded hosted recommendation screenshot | Case CDI-008FC82110, captured 2 October 2026 UTC |
 | 09 | Actual Microsoft 365 Copilot conversation | Same case; conversation `da2d62d2-7c44-4d87-bad6-68aecbc648c0`, captured 2 October 2026 UTC |
 | 10 | Published Microsoft IQ overview slide | Captured 4 October 2026; platform framing |
 
-The archived capture identities, dates and output shapes were checked against the saved browser and end-to-end receipts. No case was created, approved or booked to prepare this media story.
+Capture identities, dates and output shapes were checked against the saved browser and end-to-end receipts. The MINI incident and initial email were prepared for the live walkthrough; capturing its form did not submit the report, approve a repair or create a booking.
 
 ## Microsoft references
 

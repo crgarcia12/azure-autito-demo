@@ -127,7 +127,7 @@ class Cloud:
             time.sleep(min(float(headers.get("Retry-After", "5")), 30))
             result = self.request("GET", url, wait=False)
             status = result.get("status", "") if isinstance(result, dict) else ""
-            if status.lower() in {"failed", "cancelled", "canceled"}:
+            if status.lower() in {"failed", "cancelled", "canceled", "deduped"}:
                 raise RuntimeError(f"Cloud operation {status}: {result}")
             if status.lower() in {"succeeded", "completed"}:
                 if url.startswith(FABRIC + "/operations/"):

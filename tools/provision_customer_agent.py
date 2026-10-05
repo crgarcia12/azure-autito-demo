@@ -10,6 +10,8 @@ from azure.ai.projects.models import (
 )
 
 from fleet.customer_agent import customer_prompt
+from fleet.demo_case import PHOTO, VEHICLE_DETAILS
+from fleet.evidence import safe_image
 from fleet.foundry import CUSTOMER_AGENT_INSTRUCTIONS, CUSTOMER_AGENT_NAME, FoundryEvidenceAgent
 from tools.cloud import Cloud, ROOT, load_state, save_state
 
@@ -35,11 +37,11 @@ def main():
             ),
         )
     proposed = {"customer_agent_name": agent.name, "customer_agent_version": agent.version, "customer_agent_id": agent.id}
-    vehicle = {"Make": "Mercedes-Benz", "Model": "C-Class", "City": "London"}
+    vehicle = {**VEHICLE_DETAILS, "City": "London"}
     telemetry = {"PeakAccelerationG": 3.7, "DeltaVKmh": 6.0, "SpeedBeforeKmh": 6.0}
     smoke = FoundryEvidenceAgent(state, cloud.credential, agent_name=agent.name, agent_version=agent.version).invoke(
         "Write the customer's incident report. Return the JSON object.", customer_prompt(vehicle, telemetry),
-        (ROOT / "static" / "demo-assets" / "bumper-dent.jpg").read_bytes(),
+        safe_image(PHOTO.read_bytes())[0],
     )
     if len(str(smoke.data.get("description", "")).strip()) < 15:
         raise RuntimeError("The Foundry customer agent did not return a usable report.")

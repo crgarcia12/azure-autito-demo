@@ -77,8 +77,7 @@
       <span><i style="background:var(--people)"></i>People</span>
       <span><i style="background:var(--fabric)"></i>Microsoft Fabric</span>
       <span><i style="background:var(--foundry)"></i>Microsoft Foundry</span>
-      <span><i style="background:var(--studio)"></i>Copilot Studio</span>
-      <span><i class="ag"></i>bold border = AI agent</span>
+      <span><i style="background:var(--studio)"></i>Work IQ</span>
     </div>
   </header>
 
@@ -104,7 +103,7 @@
       <div class="step" id="s2" data-lane="0" data-col="1">
         <div class="top"><span class="num" style="background:var(--people)">2</span><h3>Customer reports</h3></div>
         <p>Photos + a short explanation from the phone</p>
-        <div class="trig"><b>Wakes:</b> secure link on the phone</div>
+        <div class="trig"><b>Wakes:</b> secure reporting link by email</div>
       </div>
 
       <div class="step agent" id="s3" data-lane="2" data-col="2" style="border-color:var(--foundry)">
@@ -115,7 +114,7 @@
 
       <div class="step agent" id="s4" data-lane="3" data-col="3" style="border-color:var(--studio)">
         <div class="top"><span class="num" style="background:var(--studio)">4</span><h3>Coordinator asks</h3></div>
-        <p>Writes one quote request, emailed to 3 garages</p>
+        <p>Applies the supplied policy; the app emails RFQs to repair centers</p>
         <div class="trig"><b>Wakes:</b> brief is ready</div>
       </div>
 
@@ -127,14 +126,13 @@
 
       <div class="step agent" id="s6" data-lane="3" data-col="5" style="border-color:var(--studio)">
         <div class="top"><span class="num" style="background:var(--studio)">6</span><h3>Coordinator<br>recommends</h3></div>
-        <p>OEM policy first, then repair + downtime cost</p>
+        <p>Fastest + cheapest + compliant with policies</p>
         <div class="trig"><b>Wakes:</b> all 3 quotes in</div>
       </div>
 
       <div class="step" id="s7" data-lane="0" data-col="6" style="border:2px solid var(--people)">
         <span class="gate">HUMAN GATE</span>
         <div class="top"><span class="num" style="background:var(--people)">7</span><h3>Manager decides</h3></div>
-        <p>Keeps Copilot's pick or chooses another, with a reason</p>
         <div class="trig"><b>Wakes:</b> “ready for approval” email</div>
       </div>
 
@@ -146,16 +144,14 @@
 
       <div class="step agent" id="s9" data-lane="1" data-col="8" style="border-color:var(--fabric)">
         <div class="top"><span class="num" style="background:var(--fabric)">9</span><h3>Fleet data agent</h3></div>
-        <p>Fabric data agent over the ontology, also in Microsoft 365 Copilot</p>
+        <p>Fabric data agent over governed Lakehouse tables, also in Microsoft 365 Copilot</p>
         <div class="trig"><b>Wakes:</b> someone asks a question</div>
       </div>
     </div>
   </div>
 
   <footer>
-    <p><b>6 agents:</b> 1 Foundry (evidence) · 4 Copilot Studio (coordinator + Alder, Metro, Riverside) · 1 Fabric data agent. The Activator and pipeline are rules, not agents.</p>
-    <p><b>Each step wakes the next.</b> The operations app checks every case every 20 s and hands it to whoever acts next. Agents never call each other.</p>
-    <p><b>Nothing is booked without step 7.</b> Garages talk by real email (dashed lines), so the thread is the audit trail.</p>
+    <p><b>6 agents:</b> 1 Foundry evidence agent · 4 Copilot Studio repair agents · 1 Fabric data agent.</p>
   </footer>
 </section>
 <div class="hint">F = full screen · P = print / PDF</div>

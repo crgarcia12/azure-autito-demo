@@ -26,8 +26,12 @@ Compare dates using ReportDate, a string, and quote dates explicitly in SQL.
 VehicleState is the latest snapshot of each physical car, updated about every two minutes from Eventhouse.
 Report its Timestamp/AsOf freshness whenever asked for current status. If data is stale, say so.
 Vehicles is the register. Branches are depots. Rentals links vehicles to corporate rental accounts.
+Vehicles.City is the current operating location; BranchId and BranchName identify the home branch and can differ.
+Read City from the current vehicle record, never infer it from the home branch. RegisterVersion identifies revised vehicle metadata.
 Incidents links CaseId to VehicleId and records the actual workflow status, privacy-cleared report summary,
 quote count, recommended garage, recorded operator approval and confirmed return date.
+Status archived is a retained earlier demo run, not an active incident or a statement that repairs finished.
+Exclude archived, closed and not_an_incident cases from current incident counts.
 RepairQuotes contains the actual replies received from the three approved repair-centre inboxes.
 PartsComplianceStatus and PartsEligible record quotation-level parts eligibility, NOT supplier-list approval.
 RP-02 of CD-REP-001 permits only new genuine OEM replacement parts approved for the vehicle.
@@ -51,8 +55,9 @@ BookingConfirmed=true and Status=booked mean the garage actually confirmed the b
 Do not infer safety, insurance coverage, liability or completed repairs from incident or photo summaries.
 Use the explicit repair price and return date; do not choose solely by the lowest repair price.
 Join tables on VehicleId, BranchId or RentalId as appropriate. Do not double-count after joins.
-For operational questions, highlight low battery (<20%), low tyre pressure (<1.9 bar), maintenance,
-vehicle utilisation, the busiest branches and the vehicles contributing most kilometers.
+The current operation has two vehicle states: on-hire (including parked rental cars) and incident.
+For operational questions, highlight open incidents, vehicle utilisation, current locations,
+the busiest branches and the vehicles contributing most kilometers. Do not create battery or charging alerts.
 Give concise, decision-ready answers with the queried reporting period and source. Use tables for comparisons.
 If no data matches, say that no matching data is available, not that the value is zero.
 For a daily briefing, state the total kilometers, active/total vehicles, leading branches, top three cars,
@@ -283,8 +288,8 @@ def materialize_graph(cloud: Cloud, state: dict, schemas: dict[str, pa.Schema], 
         "graphDefinition.json": {"$schema": f"{base}/graphDefinition/1.0.0/schema.json", "nodeTables": node_tables, "edgeTables": edge_tables},
     }
     parts = [part(item["path"], generated[item["path"]]) if item["path"] in generated else item for item in existing if item["path"] != ".platform"]
+    # Updating the definition starts a refresh; a second request is deduplicated by Fabric.
     cloud.request("POST", url + "/updateDefinition", {"definition": {"parts": parts}})
-    cloud.request("POST", f"{FABRIC}/workspaces/{workspace}/items/{graph_id}/jobs/instances?jobType=RefreshGraph")
     return graph_id
 
 
@@ -331,7 +336,7 @@ def create_data_agent(cloud: Cloud, state: dict, schemas: dict[str, pa.Schema], 
     select_all(cloud, source_url + "/elements")
     cloud.request(
         "POST", f"{FABRIC}/workspaces/{state['workspace_id']}/dataAgents/{agent_id}/staging/publish",
-        {"publishedDescription": "Caldova Drive answers UK fleet operations questions from Fabric: cars, current locations, battery, tyre pressure, rentals, branch utilization and exact kilometers by Europe/Madrid reporting date. Preserve the reporting dates, units, source attribution and data freshness in the answer."},
+        {"publishedDescription": "Caldova Drive answers UK fleet operations questions from Fabric: cars on hire, current locations, active incidents, rentals, branch utilization and exact kilometers by Europe/Madrid reporting date. Exclude archived cases from current operations. Preserve reporting dates, units, source attribution and data freshness."},
     )
     return agent_id
 
@@ -346,12 +351,12 @@ def main() -> None:
     state["ontology_id"] = create_ontology(cloud, state, schemas)
     save_state(state)
     print(f"Fabric IQ ontology: {state['ontology_id']}", flush=True)
-    state["graph_id"] = materialize_graph(cloud, state, schemas, state["ontology_id"])
-    save_state(state)
-    print(f"Ontology graph: {state['graph_id']}", flush=True)
     state["data_agent_id"] = create_data_agent(cloud, state, schemas, refresh_schema=args.refresh_schema)
     save_state(state)
     print(f"Published data agent: {state['data_agent_id']}", flush=True)
+    state["graph_id"] = materialize_graph(cloud, state, schemas, state["ontology_id"])
+    save_state(state)
+    print(f"Ontology graph definition updated; automatic refresh requested: {state['graph_id']}", flush=True)
 
 
 if __name__ == "__main__":

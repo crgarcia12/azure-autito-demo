@@ -5,12 +5,12 @@ const number = (value, digits = 0) => new Intl.NumberFormat("en-GB", { maximumFr
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const state = { vehicles: [], city: "all", status: "all", search: "", selected: null, map: null, markers: new Map(), mapReady: false, history: [], busy: false, briefing: null, controls: null, config: null, view: "overview", requestedCase: new URLSearchParams(location.hash.split("?")[1] || "").get("case") };
 const titles = {
-  overview: ["Overview", "Your fleet, in motion", "A connected view of every vehicle. The clarity to keep moving."],
-  vehicles: ["Vehicles", "Every vehicle. Every detail", "Your live rental fleet, from registration to real-time health."],
-  intelligence: ["Fleet intelligence", "From data to decisions", "A shared understanding of your business, powered by Microsoft Fabric IQ."],
-  briefings: ["Morning briefing", "Start a step ahead", "Yesterday's journeys. Today's perspective. Delivered to Teams."],
-  injector: ["Telemetry studio", "Keep your fleet connected", "Road-following telemetry, flowing directly into Microsoft Fabric."],
-  incidents: ["Incident centre", "A better way back on the road", "Every signal, every conversation, one confident decision."],
+  overview: ["Overview", "Fleet overview", "Vehicle status and location."],
+  vehicles: ["Vehicles", "Vehicle register", "Current vehicle and rental records."],
+  intelligence: ["Fleet intelligence", "Fleet data", "Query mileage, locations and incident status."],
+  briefings: ["Morning briefing", "Mileage briefing", "Previous-day mileage and scheduled delivery."],
+  injector: ["Telemetry studio", "Telemetry", "Inspect and control vehicle-data ingestion."],
+  incidents: ["Incident centre", "Incidents", "Customer reports, quotations and approvals."],
 };
 
 const carSvg = (light = false) => `<svg viewBox="0 0 48 30" fill="none" aria-hidden="true"><path d="M8 19l4-8h18l7 8 5 2v4H5v-5l3-1z" fill="${light ? "#ffffff" : "#aabb9c"}"/><path d="M15 12h7v7H12l3-7zm10 0h4l6 7H25v-7z" fill="${light ? "#547e55" : "#e3ebdb"}"/><circle cx="13" cy="25" r="4" fill="${light ? "#ffffff" : "#526a43"}"/><circle cx="35" cy="25" r="4" fill="${light ? "#ffffff" : "#526a43"}"/><circle cx="13" cy="25" r="1.5" fill="${light ? "#547e55" : "#e3ebdb"}"/><circle cx="35" cy="25" r="1.5" fill="${light ? "#547e55" : "#e3ebdb"}"/></svg>`;
@@ -23,7 +23,7 @@ async function api(path, body) {
     credentials: "same-origin",
   });
   const type = response.headers.get("content-type") || "";
-  if (!type.includes("application/json")) throw new Error("Your session has expired. Reload and sign in to the Caldova demo tenant.");
+  if (!type.includes("application/json")) throw new Error("Your session has expired. Reload and sign in with the configured operator account.");
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || `The request failed (${response.status}).`);
   return result;
@@ -42,19 +42,14 @@ function toast(message) {
 }
 
 function statusLabel(vehicle) {
-  if (vehicle.Alert) return vehicle.Alert;
-  return { "on-hire": "On hire", available: "Available", charging: "Charging", maintenance: "Maintenance", incident: "Incident hold" }[vehicle.Status] || vehicle.Status;
-}
-
-function energyLabel(vehicle) {
-  return vehicle.BatteryPct !== null && vehicle.BatteryPct !== undefined ? `${number(vehicle.BatteryPct)}% battery` : `${number(vehicle.FuelPct)}% fuel`;
+  return { "on-hire": "On hire", incident: "Incident detected" }[vehicle.Status] || vehicle.Status;
 }
 
 function filteredVehicles() {
   return state.vehicles.filter((vehicle) =>
     (state.city === "all" || vehicle.City === state.city) &&
     (state.status === "all" || (state.status === "attention" ? Boolean(vehicle.Alert) : vehicle.Status === state.status)) &&
-    `${vehicle.VehicleId} ${vehicle.Registration} ${vehicle.Make} ${vehicle.Model} ${vehicle.City}`.toLowerCase().includes(state.search)
+    `${vehicle.VehicleId} ${vehicle.Registration} ${vehicle.Make} ${vehicle.Model} ${vehicle.Colour || ""} ${vehicle.City}`.toLowerCase().includes(state.search)
   );
 }
 
@@ -66,8 +61,8 @@ function renderVehicles() {
   const vehicles = filteredVehicles();
   $("vehicle-list").innerHTML = vehicles.length ? vehicles.map(vehicleRow).join("") : '<p class="loading-copy">No vehicles match your filters.</p>';
   $("activity-count").textContent = vehicles.length;
-  $("vehicles-table").innerHTML = state.vehicles.map((vehicle) => `<tr><td><button class="text-link" data-vehicle="${escapeHtml(vehicle.VehicleId)}">${escapeHtml(vehicle.Make)} ${escapeHtml(vehicle.Model)}<br>${escapeHtml(vehicle.VehicleId)}</button></td><td>${escapeHtml(vehicle.Registration)}</td><td>${escapeHtml(vehicle.City)}</td><td><span class="status-badge ${vehicle.Alert ? "attention" : ""}">${escapeHtml(vehicle.Status.replace("-", " "))}</span></td><td>${number(vehicle.SpeedKmh)} km/h</td><td>${energyLabel(vehicle)}</td><td>${number(vehicle.OdometerKm)} km</td><td>${escapeHtml(vehicle.Alert || "Healthy")}</td></tr>`).join("");
-  $("telemetry-table").innerHTML = state.vehicles.map((vehicle) => `<tr><td>${escapeHtml(new Date(vehicle.Timestamp).toLocaleTimeString("en-GB"))}</td><td>${escapeHtml(vehicle.VehicleId)}</td><td>${Number(vehicle.Latitude).toFixed(5)}</td><td>${Number(vehicle.Longitude).toFixed(5)}</td><td>${number(vehicle.SpeedKmh, 1)} km/h</td><td>${number(vehicle.DistanceKm, 3)} km</td><td>${energyLabel(vehicle)}</td><td title="${escapeHtml(vehicle.EventId)}">${escapeHtml(vehicle.EventId.slice(0, 12))}…</td></tr>`).join("");
+  $("vehicles-table").innerHTML = state.vehicles.map((vehicle) => `<tr><td><button class="text-link" data-vehicle="${escapeHtml(vehicle.VehicleId)}">${escapeHtml(vehicle.Make)} ${escapeHtml(vehicle.Model)}<br>${escapeHtml(vehicle.VehicleId)}</button></td><td>${escapeHtml(vehicle.Registration)}</td><td>${escapeHtml(vehicle.City)}</td><td><span class="status-badge ${vehicle.Alert ? "attention" : ""}">${escapeHtml(statusLabel(vehicle))}</span></td><td>${number(vehicle.SpeedKmh)} km/h</td><td>${number(vehicle.OdometerKm)} km</td></tr>`).join("");
+  $("telemetry-table").innerHTML = state.vehicles.map((vehicle) => `<tr><td>${escapeHtml(new Date(vehicle.Timestamp).toLocaleTimeString("en-GB"))}</td><td>${escapeHtml(vehicle.VehicleId)}</td><td>${Number(vehicle.Latitude).toFixed(5)}</td><td>${Number(vehicle.Longitude).toFixed(5)}</td><td>${number(vehicle.SpeedKmh, 1)} km/h</td><td>${number(vehicle.DistanceKm, 3)} km</td><td>${escapeHtml(statusLabel(vehicle))}</td><td title="${escapeHtml(vehicle.EventId)}">${escapeHtml(vehicle.EventId.slice(0, 12))}…</td></tr>`).join("");
   renderSelected();
   updateMap();
 }
@@ -85,7 +80,7 @@ function renderMetrics(data) {
   $("yesterday-km").innerHTML = `${number(data.yesterday.totalKm)}<small>km</small>`;
   $("mileage-period").textContent = new Date(`${data.yesterday.reportDate}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " · Europe/Madrid";
   $("alert-count").textContent = alerts.length;
-  $("alert-summary").textContent = `${alerts.filter((v) => v.Status === "maintenance").length} maintenance · ${alerts.filter((v) => v.Status !== "maintenance").length} health alerts`;
+  $("alert-summary").textContent = `${alerts.length} ${alerts.length === 1 ? "vehicle" : "vehicles"} with an open incident`;
   const max = Math.max(...data.branches.map((branch) => branch.distanceKm), 1);
   $("branches").innerHTML = data.branches.map((branch) => `<div class="branch-row"><span class="branch-initial">${escapeHtml(branch.branchId)}</span><span class="branch-name">${escapeHtml(branch.city)}<span class="branch-count">${branch.vehicles} vehicles</span></span><span class="branch-track"><i style="width:${Math.max(branch.distanceKm / max * 100, 1)}%"></i></span><span class="branch-distance">${number(branch.distanceKm)}</span></div>`).join("");
   if (data.trend.length > 1) {
@@ -116,7 +111,7 @@ async function refresh() {
     $("toggle-injector").textContent = data.injector.paused ? "Resume telemetry" : "Pause telemetry";
     $("injector-checkpoint").textContent = `${number(data.injector.events || 0)} live events committed · Checkpoint ${data.injector.through || "not available"}`;
     $("briefing-date").textContent = `${data.yesterday.reportDate} · Europe/Madrid calendar day`;
-    $("delivery-state").textContent = data.delivery.connected ? `Teams connected. ${data.delivery.lastSent ? `Last delivered ${new Date(data.delivery.lastSent).toLocaleString("en-GB")}.` : "Ready for the next morning briefing."}` : "Open Caldova Drive in Teams once to connect your personal chat.";
+    $("delivery-state").textContent = data.delivery.connected ? `Teams connected. ${data.delivery.lastSent ? `Last delivered ${new Date(data.delivery.lastSent).toLocaleString("en-GB")}.` : "Awaiting scheduled delivery."}` : "Open the fleet app in Teams to connect your personal chat.";
     renderMetrics(data);
     renderVehicles();
     if (firstLoad) fitMap();
@@ -177,7 +172,7 @@ function updateMap() {
     }
     const element = marker.getOptions().htmlContent;
     element.classList.add("map-vehicle");
-    for (const status of ["attention", "on-hire", "available", "charging", "maintenance"]) {
+    for (const status of ["attention", "on-hire"]) {
       element.classList.toggle(status, status === (vehicle.Alert ? "attention" : vehicle.Status));
     }
     element.classList.toggle("selected", state.selected === vehicle.VehicleId);
@@ -211,8 +206,9 @@ function renderSelected() {
   const vehicle = state.vehicles.find((item) => item.VehicleId === state.selected);
   $("selected-vehicle").hidden = !vehicle;
   if (!vehicle) return;
-  $("selected-vehicle").innerHTML = `<span class="car-icon">${carSvg()}</span><span><b class="vehicle-name">${escapeHtml(vehicle.Make)} ${escapeHtml(vehicle.Model)}</b><span class="vehicle-reg">${escapeHtml(vehicle.Registration)} · ${escapeHtml(vehicle.City)}</span></span><span class="selected-metrics"><span><b>${number(vehicle.SpeedKmh)} km/h</b><small>Current speed</small></span><span><b>${energyLabel(vehicle)}</b><small>Energy level</small></span><span><b>${number(vehicle.OdometerKm)} km</b><small>Odometer</small></span></span><button class="selected-close" id="clear-selection" aria-label="Clear vehicle selection">×</button>`;
+  $("selected-vehicle").innerHTML = `<span class="car-icon">${carSvg()}</span><span><b class="vehicle-name">${escapeHtml(vehicle.Make)} ${escapeHtml(vehicle.Model)}</b><span class="vehicle-reg">${escapeHtml(vehicle.Registration)} · ${escapeHtml(vehicle.City)}</span></span><span class="selected-metrics"><span><b>${number(vehicle.SpeedKmh)} km/h</b><small>Current speed</small></span><span><b>${number(vehicle.OdometerKm)} km</b><small>Odometer</small></span></span><button class="selected-close" id="clear-selection" aria-label="Clear vehicle selection">×</button>`;
   $("clear-selection").addEventListener("click", () => { state.selected = null; state.routeSource?.clear(); renderSelected(); updateMap(); });
+  if (vehicle.Colour) $("selected-vehicle").querySelector(".vehicle-reg").textContent += ` · ${vehicle.Colour}`;
   if (vehicle.IncidentId) {
     const button = document.createElement("button");
     button.className = "button button-light";
@@ -262,7 +258,7 @@ function setView(view) {
   document.querySelectorAll(".view-panel").forEach((panel) => { panel.hidden = panel.id !== `${view}-view`; });
   document.querySelectorAll(".nav-item[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   $("page-name").textContent = titles[view][0];
-  $("page-title").innerHTML = `${escapeHtml(titles[view][1])}<span>.</span>`;
+  $("page-title").textContent = titles[view][1];
   $("page-description").textContent = titles[view][2];
   window.history.replaceState(null, "", view === "overview" ? "/" : `/#${view}`);
   if (view === "overview" && state.mapReady) requestAnimationFrame(() => state.map.resize());
@@ -355,11 +351,11 @@ async function briefingAction(send) {
 }
 
 function exportFleet() {
-  const keys = ["VehicleId", "Registration", "Make", "Model", "City", "Status", "SpeedKmh", "OdometerKm", "BatteryPct", "FuelPct", "Alert", "Timestamp"];
+  const keys = ["VehicleId", "Registration", "Make", "Model", "City", "Status", "SpeedKmh", "OdometerKm", "Alert", "Timestamp"];
   const quote = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
   const csv = [keys.join(","), ...state.vehicles.map((vehicle) => keys.map((key) => quote(vehicle[key])).join(","))].join("\r\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const anchor = document.createElement("a"); anchor.href = url; anchor.download = `caldova-fleet-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); URL.revokeObjectURL(url);
+  const anchor = document.createElement("a"); anchor.href = url; anchor.download = `fleet-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); URL.revokeObjectURL(url);
 }
 
 async function start() {

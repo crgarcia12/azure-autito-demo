@@ -1,5 +1,6 @@
 {
   "claims_mailbox": "claims@caldova08667473.onmicrosoft.com",
+  "customer_notification_mailbox": "admin@caldova08667473.onmicrosoft.com",
   "currency": "GBP",
   "downtime_cost_per_day": 100,
   "maximum_repair_quote": 2500,

@@ -2,7 +2,7 @@
 
 ## Scope and operating boundaries
 
-The approved demo is a UK rental-fleet insurance journey: telemetry detects a possible impact, the customer reports the incident and uploads photos, an agent prepares a redacted repair brief, three Copilot Studio garage agents respond to real quotation emails, and the operator approves a repair recommendation before a booking is sent.
+The approved demo is a UK rental-fleet insurance journey: telemetry detects a possible impact, the customer reports the incident and uploads photos, Foundry prepares a redacted repair brief, Studio agents generate quotations/recommendations with app-supplied policy, and the app sends real emails after validation and operator approval.
 
 Everything is scoped to **Caldova**:
 
@@ -26,7 +26,43 @@ Everything is scoped to **Caldova**:
 
 The user approved dedicated claims/garage shared mailboxes and required AI/agent consumption. **SMS is now a phone-message preview with a real reporting link**, explicitly requested instead of a paid delivery. No private endpoint or VNet is approved. The existing Apollo workspace must not be modified. No credential resets, MFA bypasses, corporate-tenant changes, or messages to real external garages are permitted.
 
-## Current result: working hosted insurance journey
+## Current architecture: restored app-managed policy and email
+
+The user requested rollback of the experimental agent-owned policy/email migration. `fleet\repair_workflow.py` again uses the four secured **Copilot Studio** agents, supplies `repair_policy()` and `policy_reference()` in their context, validates their results and invokes `RepairMail.send` directly. Initial customer notifications do not depend on a model or Work IQ connection.
+
+The native Foundry repair functions/agents and the `work-iq` OAuth project connection remain in place as requested, but are not called by the active workflow. Their code is retained in `fleet\repair_agents.py` and `fleet\workiq.py`; the evidence and customer agents still use their existing working Foundry endpoints. No evidence-agent permission to send email was added.
+
+The unattended evidence endpoint must use a **tool-free processing version**. User-authenticated Work IQ Mail and web tools belong in interactive agent versions, not the managed-identity photo-processing path. An HTTP 400 at that stage prevented any garage requests; restoring published version `6` resumed both submitted cases through three actual quotations. The added tools remain in the other Foundry versions. Local face/text masking remains enabled.
+
+The attempted native path produced actual policy lookups, supplier messages and an isolated booking, but did not become a reliable hosted replacement. Do not present those retained functions as the current production path. Work IQ remains independently demonstrable through the verified Microsoft 365 Copilot conversation.
+
+### Repeat the demo
+
+For the two-stage presentation, run `.\.venv\Scripts\python.exe -m tools.prepare_mini_demo --new-run`. It cleans other pending cases and leaves exactly two active MINI incidents: one with both `crash2.png` and `crash1.png` processed and three actual offers ready for operator choice; one with zero photos, an unsubmitted form and a fresh customer email. Omit `--new-run` to resume without replacing the pair. Both remain unapproved.
+
+Run `.\.venv\Scripts\python.exe -m tools.reset_mini` from the repository. It deletes only MINI incident records and their local evidence/tokens, archives other incidents while retaining their approvals/booking evidence, ingests a new MINI impact into Fabric and sends one real initial email through the original application-managed Exchange transport. It leaves the new case **awaiting_report**, with zero photos and no submitted narrative.
+
+The reset manifest and event ID are durable. Interrupted runs resume without creating a second case. An impact cutoff prevents delayed old Fabric callbacks from recreating deleted cases. Unknown email outcomes block reset rather than discarding send receipts. Live telemetry/history and the 40-car register are retained; only the MINI is **Incident detected**, and the other 39 cars are **On hire**. Charging/low-battery scenarios and energy panels are removed from the active portal.
+
+`GET /api/incidents` lists the current run. `?history=true` also returns archived records; their direct links remain readable, but they no longer hold cars or run procurement. Empty case/quote projections clear obsolete Lakehouse rows rather than retaining deleted MINI quotations.
+
+**Restored run, 5 October:** build `4037779865184f7d`, case `CDI-CF6D654773`. The actual report-link email reached the configured admin inbox at `2026-10-05T02:13:28Z`; the case was left awaiting its customer report, with zero uploaded photos. Two consecutive reset runs verified replacement of the prior MINI case without reopening old impacts. Hosted browser checks confirmed 40 map markers, 39 On hire vehicles, one incident, the empty editable report and mobile layout.
+
+**Deployment correction:** an existing compressed Oryx artifact was taking precedence over newer deployed files. Prebuilt startup now explicitly changes to `/home/site/wwwroot` before `python -m fleet.web`; `tools.deploy` waits for SCM after configuration and verifies the exact active build ID.
+
+The sections below record earlier implementation milestones and case IDs. They are historical, not instructions to reuse an old MINI link after reset.
+
+### Customer report and image privacy
+
+The customer form no longer asks about safety or assistance; omitted fields remain `None`, while explicit legacy assistance requests still stop procurement. The submitted confirmation and future initial notification emails end at the case reference.
+
+`fleet\privacy_detection.py` runs local YuNet face detection and PP-OCRv3 text-region detection. `fleet\evidence.py` maps their measured coordinates to the exact normalized raster, applies outward-rounded, padded masks, and sends that masked image to Foundry. The model no longer supplies mask coordinates. This corrects the reported face boxes being applied to the lower body and avoids relying on imprecise model-generated plate boxes.
+
+The original PNG/JPEG/WebP and normalized JPEG are unchanged. `POST /api/incidents/{case}/reprocess-evidence` requires the current version and a review-stage case with no quotes/approval; it archives the previous report and derived artifacts before reprocessing. It never resubmits the customer's account.
+
+Models are bundled with SHA-256 verification and upstream licences: [YuNet, MIT](https://github.com/opencv/opencv_zoo/tree/f12e12798e8314f7c074a6656816c048dcc95b7a/models/face_detection_yunet) and [PP-OCRv3, Apache-2.0](https://github.com/opencv/opencv_zoo/tree/25f423d0e04c31a17254620e58febd7386da523b/models/text_detection_ppocr). Neither detector identifies a person or transcribes text. `tools.provision_foundry --agent-only` updates the evidence instructions while preserving the existing tools, model and response settings.
+
+## Historical verification: 4 October, before the tool-runtime migration
 
 The hosted incident journey has been exercised against **actual Fabric, Azure model inference, Copilot Studio and Exchange Online**, including a real operator approval in the browser and a subsequent real garage confirmation.
 
@@ -34,6 +70,7 @@ Start at <https://caldovadrive08667473.azurewebsites.net/#incidents>. Sign in wi
 
 | Ready-to-present case | Vehicle | State | What to demonstrate |
 | --- | --- | --- | --- |
+| `CDI-4170F5EC25` | CD-006, green MINI Cooper in Stornoway | Awaiting customer report | Editable contact prefills, empty explanation, source-linked weather observations and `media\crash1.png` upload. |
 | `CDI-008FC82110` | CD-002, Volvo EX30 | Recommendation ready | OEM policy; fastest/cheapest aftermarket offer excluded; real quotation emails; compliant-only slider and **Approve & book**. Deliberately unapproved. |
 | `CDI-EDB4612D4F` | CD-003, Volkswagen Golf | Booked | New genuine OEM approval, actual native garage confirmation, identical approved and confirmed quotation hashes. |
 | `CDI-E277BBAC5C` | CD-001, Polestar 2 | Booked | Prior completed booking; original historical terms preserved. |
@@ -44,13 +81,13 @@ Earlier case IDs and cost comparisons below are historical verification records.
 
 **Real versus generated:** telemetry, rental identities and garage rate/capacity data are generated for the demonstration. The Fabric rule, pipeline, data agent, four Copilot Studio agents, image-model calls, emails, PDF generation, authentication, uploads and approval processing are real. The phone notification is an in-app preview, not a paid SMS.
 
-**Validation:** 89 unit/API tests pass after the OEM-policy extension, including forbidden parts, missing declarations, no-replacement repairs, per-part checks, invalid overrides, stale booking terms, historical-record preservation, actual Word content and the exact published document hash. The earlier 51-test suite also passed with cloud configuration and credentials deliberately unavailable. A separate hosted browser run uses a legitimate user-delegated Caldova token and checks the deployed application, all 40 map markers, quote comparison, emails, mobile layout and access boundaries. The core real-service and hosted end-to-end runs are recorded below.
+**Validation:** 129 unit/API tests pass after the Stornoway form and weather update, including customer-email idempotency, atomic reporting links, photo/vehicle matching, operational labels and the existing repair-policy checks. The earlier 51-test suite also passed with cloud configuration and credentials deliberately unavailable. A separate hosted browser run uses a legitimate user-delegated Caldova token and checks the deployed application, all 40 map markers, quote comparison, emails, mobile layout and access boundaries. The core real-service and hosted end-to-end runs are recorded below.
 
 **Microsoft 365:** in the same Caldova profile, open [Microsoft 365 Copilot](https://m365.cloud.microsoft/chat/?auth=2&tenantId=b6883271-971b-4198-92a5-8ad615765572), select **Agents > Caldova Fleet IQ** (created by Fabric Data Agent), and ask about case `CDI-008FC82110`. The published native Fabric agent was verified against the actual new `RepairQuotes` fields: Alder is noncompliant under RP-02, Metro and Riverside are eligible, and the policy is CD-REP-001 v1.0.
 
 **Work IQ:** in main Copilot with Work IQ enabled, open the actual saved conversation **Caldova Repair Policy Comparison** (`da2d62d2-7c44-4d87-bad6-68aecbc648c0`). It retrieved `Caldova-Repair-Policy.docx` and all three quotation-evidence emails for `CDI-008FC82110`, cited the Word clauses and emails, excluded the fastest/cheapest aftermarket offer, and recommended Metro at GBP 1,100. This was verified in the real Caldova browser conversation, not inferred from file publication or a Graph email adapter.
 
-**Current build verified:** `f5af8dec36346872`, including the genuine-OEM policy, parts-aware quote cards and booking gates. The hosted worker is running, the prepared case states remain persisted, all four Copilot Studio channels reject anonymous access, and evidence processing uses the real Foundry project agent. The earlier Foundry cutover build was `c7b7fa81d26b90fb`; the overnight build was `ba5a179f9713fc84`.
+**Current build verified:** `17c7390f5aba814c`, including the Stornoway location, editable contact prefills, an empty explanation, weather observations and external-only garage email copy. The hosted worker is running, the prepared case states remain persisted, all four Copilot Studio channels reject anonymous access, and evidence processing uses the real Foundry project agent. The earlier Foundry cutover build was `c7b7fa81d26b90fb`; the overnight build was `ba5a179f9713fc84`.
 
 ## Status at the start of autonomous implementation
 
@@ -362,3 +399,29 @@ To prepare another unapproved policy case:
 ```powershell
 .\.venv\Scripts\python.exe -m tests.live_insurance --leave-ready
 ```
+
+## Customer email and operational MINI portal, 4 October 2026
+
+- Initial incident notifications are real emails from the claims mailbox to `admin@caldova08667473.onmicrosoft.com`, selected by the user as the customer inbox. The subject is `[case] [REPORT] Your secure incident report link`.
+- The email and **Open customer journey** share the same expiring capability. Case creation, link rotation and the stored token now commit atomically. A durable outbox receipt prevents duplicate initial emails; confirmed sends are reconciled into the case even after an interrupted audit write.
+- The first verified customer email was for `CDI-5D489A69A8` at `2026-10-04T20:06:47Z`. After the vehicle/photo update, the MINI email was sent for `CDI-2DFF4DB375` at `2026-10-04T20:54:41Z`. Its actual emailed link opened the hosted form; no report was submitted by verification.
+- Primary supplied image: `media\crash1.png`, SHA-256 `b9f7f397c18b3445173a3a6ba222584265f739adc7dcdaff6a0915cc88458291`. The original PNG is packaged unchanged and preserved on upload. Model processing uses the existing normalized JPEG path.
+- Vehicle CD-006 is now MINI Cooper, Green, registration YK23 LZP. `tools\sync_demo_vehicle.py` changes only this register entry; `RegisterVersion=2` disambiguates it from prior ingested metadata. Routes, telemetry event IDs, odometers and existing incident snapshots are unchanged. The tool clears only the Vehicles streaming-schema cache before using added columns, then verifies the exact ingested values.
+- The customer-report simulator is limited to the matching MINI. Other vehicles retain manual photo upload. Garage offer text now refers to the damaged bumper rather than incorrectly hard-coding a rear bumper.
+- Removed promotional headings and company branding from portal chrome, customer-form copy, new PDF briefs and new system notices. The logo is a neutral vehicle icon. Historical correspondence and infrastructure identifiers retain their original values.
+- The genuine Foundry assessment of the MINI image redacted the plate, but classified possible fender involvement as `inspection_required`. That review gate remains intact. Use the existing prepared quotation case for the cost comparison rather than misrepresenting the MINI result.
+- Hosted checks verified the operational headings, actual map tiles, green MINI metadata, customer form, and blocked anonymous API access. Bearer-authenticated operator API checks succeeded after normal redeployment; authentication was not disabled or broadened.
+- Receipts: `.local\live-customer-email-CD-006.json`, `.local\mini-vehicle-sync.json`, `.local\mini-photo-check.json`. Visual evidence: `.local\hosted-operational-mini.png`, `.local\hosted-mini-incident.png`, `.local\customer-email-report-form.png`.
+- Fabric chat returned the actual `CD-006` values MINI / Cooper / Green after the new source columns were synchronized and selected. The ontology's automatic graph-refresh job `781c692a-f74a-4951-9377-f21998337a01` completed successfully. An additional request was marked `Deduped`; tooling now treats that as terminal and avoids requesting a second refresh after a graph-definition update.
+
+## Stornoway customer form and external garage copy
+
+- Weather context uses the Microsoft Web IQ web-search endpoint. The App Service must have `WEB_IQ_API_KEY` configured outside source control; search results retain their source URLs and are not presented as verified incident-time observations.
+- Original unapproved MINI case `CDI-2DFF4DB375` was closed with an explicit reason; its photos, customer report, assessed report, quotations and correspondence were verified unchanged. New case `CDI-4170F5EC25` received its reporting email at `2026-10-04T22:48:47Z`.
+- The MINI is parked at the configured Stornoway coordinates. Its prior odometer is retained, subsequent parked distance is zero, and other vehicles are unchanged. Historical telemetry is retained; the current map trail starts after relocation rather than drawing an artificial London-to-Stornoway journey.
+- The form no longer has the safe-place checkbox or safety-information banner. Name and email appear first and are editable, defaulting to Alex Morgan / alex.morgan@example.com. The final requested behaviour leaves **What happened? empty** and required.
+- Missing safe-place confirmation is stored as `safe=null`, not invented as true. Reported assistance or injury still stops automatic repair procurement; consent remains required for the normal route.
+- Weather context is searched through Web IQ for the incident location and timestamp. Results include source URLs and are explicitly labeled as web context, not confirmed station observations. Weather never fills or rewrites the customer's explanation. Missing or failed searches are shown as unavailable.
+- The coordinator is instructed to write an actual email to an external garage, not an internal report. The evidence-report prompt and RFQ validation reject processing notes such as “No personal identifiers or license plate information are included.” The external policy footer contains quote requirements, not internal ranking or prompt instructions.
+- A real coordinator invocation omitted the unwanted privacy commentary even when it appeared in its input brief. The customer form was exercised under its actual CSP without enabling unsafe evaluation, and its empty explanation/contact defaults/weather fields were verified on the deployed site.
+- Receipts: `.local\live-customer-email-CD-006-v3.json`, `.local\stornoway-case-setup.json`, `.local\stornoway-weather-check.json`, `.local\external-garage-email-check.json`.

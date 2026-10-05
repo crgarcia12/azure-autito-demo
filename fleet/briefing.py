@@ -66,7 +66,7 @@ class BriefingService:
             receipt = {"reportDate": day.isoformat(), "sentAt": utc_text(datetime.now(UTC)), "messageId": message_id}
             await asyncio.to_thread(self.store.put, key, receipt)
             await asyncio.to_thread(self.store.put, "last-delivery.json", receipt)
-            return {"briefing": briefing, "message": "Delivered to your Caldova Teams personal chat."}
+            return {"briefing": briefing, "message": "Delivered to your Teams personal chat."}
 
     async def due(self, now: datetime) -> bool:
         local = now.astimezone(ZoneInfo(self.config["report_timezone"]))

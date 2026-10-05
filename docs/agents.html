@@ -74,7 +74,7 @@
   <header>
     <div><h1>The agents we add</h1></div>
     <div class="count">
-      <div style="border-color:var(--foundry)"><b style="color:var(--foundry)">1</b><small>Foundry agent</small></div>
+      <div style="border-color:var(--foundry)"><b style="color:var(--foundry)">1</b><small>Foundry evidence agent</small></div>
       <div style="border-color:var(--studio)"><b style="color:var(--studio)">4</b><small>Copilot Studio agents</small></div>
       <div style="border-color:var(--fabric)"><b style="color:var(--fabric)">1</b><small>Fabric data agent</small></div>
     </div>
@@ -102,29 +102,29 @@
     <!-- Humans -->
     <div class="card" id="humans" style="left:563px; top:0; width:330px; animation-delay:.15s; border-color:color-mix(in srgb,var(--human) 55%,transparent)">
       <h3><span class="tag" style="color:var(--human)">People</span></h3>
-      <p style="margin-top:8px"><b style="color:var(--text)">Customer</b> · phone link: photos + explanation</p>
+      <p style="margin-top:8px"><b style="color:var(--text)">Customer</b> · email link: photos + explanation</p>
       <p><b style="color:var(--text)">Operations manager</b> · reviews, keeps or changes Copilot's choice, approves</p>
     </div>
 
     <!-- Orchestrator -->
     <div class="card" id="hub" style="left:543px; top:196px; width:370px; animation-delay:.2s; border:2px solid var(--app); box-shadow:0 0 0 6px #4a567014, 0 6px 24px #17203314">
-      <h3><span class="tag" style="color:var(--app)">Orchestrator</span></h3>
-      <h3 style="margin-top:8px; font-size:22px">Operations app · repair worker</h3>
-      <p>Azure App Service. One case = one state machine. Every <b style="color:var(--text)">20 s</b> it moves each case forward and checks the four shared mailboxes.</p>
+      <h3><span class="tag" style="color:var(--app)">Case and approval controls</span></h3>
+      <h3 style="margin-top:8px; font-size:22px">Operations app · case state</h3>
+      <p>Preserves evidence and approval gates. Supplies the controlled policy, routes incoming email to Studio agents and sends validated messages through Exchange.</p>
       <p style="font-size:12.5px; margin-top:7px"><code>evidence_received → report_ready → requesting_quotes → recommendation_ready → approved → booked</code></p>
     </div>
 
     <!-- Coordinator -->
     <div class="card agent" id="coord" style="left:1126px; top:0; width:330px; animation-delay:.45s; border-color:var(--studio)">
       <h3><span class="badge" style="background:var(--studio)">2</span>Claims coordinator</h3>
-      <p>Copilot Studio · <code>cdv_repaircoordinator</code></p>
-      <div class="trig"><b>Trigger A:</b> <span>brief is ready → writes the quote request (RFQ)</span><br><b>Trigger B:</b> <span>3 quotes in → recommends a garage + rationale</span></div>
+      <p>Copilot Studio · controlled policy supplied by the app</p>
+      <div class="trig"><b>Trigger A:</b> <span>brief ready → quotation request</span><br><b>Trigger B:</b> <span>three quotes → recommendation</span></div>
     </div>
 
     <!-- Garages -->
     <div class="card agent" id="garages" style="left:1126px; top:212px; width:330px; animation-delay:.55s; border-color:var(--studio)">
       <h3><span class="badge" style="background:var(--studio); width:40px">3–5</span>Garage agents</h3>
-      <p>Copilot Studio · one per repair centre, own rates and calendar</p>
+      <p>Copilot Studio · one per repair centre · own rates and calendar</p>
       <div class="sub"><div>Alder<small>alder.repairs@</small></div><div>Metro<small>metro.repairs@</small></div><div>Riverside<small>riverside.repairs@</small></div></div>
       <div class="trig"><b>Trigger:</b> <span>an email lands in its shared mailbox: RFQ → replies with a quote; BOOK → confirms the slot</span></div>
     </div>
@@ -146,7 +146,7 @@
     <!-- Edge labels -->
     <div class="lbl" style="left:345px; top:150px"><span class="n">1</span><b>Pipeline calls the app</b><br>case opened, no human triage</div>
     <div class="lbl" style="left:345px; top:304px"><span class="n">3</span><b>3 Foundry calls</b><br>photos in, brief out</div>
-    <div class="lbl" style="left:916px; top:114px"><span class="n">4</span><b>Direct Line</b> · RFQ text<br><span class="n">6</span>recommendation</div>
+    <div class="lbl" style="left:916px; top:114px"><span class="n">4</span><b>Direct Line</b> · policy + brief<br><span class="n">6</span>recommendation</div>
     <div class="lbl" style="left:916px; top:300px"><span class="n">5</span><b>Email via Graph</b><br>RFQ out · quote back<br><span class="n">8</span>BOOK out · confirm back</div>
     <div class="lbl" style="left:734px; top:130px"><span class="n">2</span>report &nbsp;<span class="n">7</span>approve</div>
     <div class="lbl" style="left:740px; top:401px">Lakehouse refresh, every ~2 min</div>
@@ -154,7 +154,7 @@
   </div>
 
   <footer>
-    <p><b>Agents never call each other.</b> The repair worker reads the case state and invokes the next agent. Every agent's answer is validated before the case moves on.</p>
+    <p><b>Agents prepare; people authorise.</b> The app supplies policy and delivers validated messages. Human approval and the actual garage confirmation remain separate steps.</p>
     <p><b>Garage agents work by email.</b> They are triggered by real messages in their own shared mailbox and reply from it. The thread is the audit trail.</p>
     <p><b>Two human gates:</b> the customer's report starts the AI work, and the manager's approval (Copilot's pick or their own, with a reason) is the only thing that books a repair.</p>
   </footer>

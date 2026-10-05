@@ -16,6 +16,8 @@ from PIL import Image, ImageDraw
 from fleet.storage import StateStore
 from tools.cloud import ARM, CONFIG, GRAPH, ROOT, Cloud, az, load_state, save_state
 
+PREBUILT_STARTUP = "cd /home/site/wwwroot && PYTHONPATH=/home/site/wwwroot/.python_packages/lib/site-packages python -m fleet.web"
+
 
 def app_path(state: dict) -> str:
     return f"{ARM}/subscriptions/{CONFIG['subscription_id']}/resourceGroups/{CONFIG['resource_group']}/providers/Microsoft.Web/sites/{state['appName']}"
@@ -67,7 +69,7 @@ def configure(cloud: Cloud, state: dict, *, prebuilt: bool = False) -> None:
     cloud.request("PUT", path + "/config/appsettings?api-version=2023-12-01", {"properties": settings})
     if prebuilt:
         cloud.request("PATCH", path + "/config/web?api-version=2023-12-01", {"properties": {
-            "appCommandLine": "PYTHONPATH=/home/site/wwwroot/.python_packages/lib/site-packages python -m fleet.web",
+            "appCommandLine": PREBUILT_STARTUP,
         }})
     cloud.request("PUT", path + "/config/authsettingsV2?api-version=2023-12-01", {"properties": {
         "platform": {"enabled": True, "runtimeVersion": "~1"},
@@ -100,16 +102,21 @@ def deployment_zip(*, prebuilt: bool = False, code_only: bool = False) -> str:
     destination = ROOT / ".local" / "caldova-drive.zip"
     digest = hashlib.sha256()
     with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
-        for directory in ("fleet", "static", "fabric", "policies"):
-            for path in (ROOT / directory).rglob("*"):
+        for directory in ("fleet", "static", "fabric", "policies", "media"):
+            for path in sorted((ROOT / directory).rglob("*")):
                 if path.is_file() and "__pycache__" not in path.parts:
-                    archive.write(path, path.relative_to(ROOT).as_posix())
-                    digest.update(path.relative_to(ROOT).as_posix().encode())
-                    digest.update(path.read_bytes())
+                    name = path.relative_to(ROOT).as_posix()
+                    payload = path.read_bytes()
+                    if path.suffix == ".py":
+                        compile(payload, name, "exec")
+                    archive.writestr(zipfile.ZipInfo.from_file(path, name), payload, compress_type=zipfile.ZIP_DEFLATED)
+                    digest.update(name.encode())
+                    digest.update(payload)
         for name in ("requirements.txt", "demo.config.json", "insurance.config.json"):
-            archive.write(ROOT / name, name)
+            payload = (ROOT / name).read_bytes()
+            archive.writestr(zipfile.ZipInfo.from_file(ROOT / name, name), payload, compress_type=zipfile.ZIP_DEFLATED)
             digest.update(name.encode())
-            digest.update((ROOT / name).read_bytes())
+            digest.update(payload)
         archive.writestr("bootstrap.json", json.dumps(StateStore().export(), allow_nan=False))
         archive.writestr(".build.json", json.dumps({"id": digest.hexdigest()[:16]}))
         (ROOT / ".local" / "build-id.txt").write_text(digest.hexdigest()[:16], encoding="utf-8")
@@ -121,10 +128,34 @@ def deployment_zip(*, prebuilt: bool = False, code_only: bool = False) -> str:
                 if path.is_file() and "__pycache__" not in path.parts:
                     if code_only:
                         top = path.relative_to(packages).parts[0]
-                        if top not in {"PIL", "pillow.libs", "reportlab"} and not top.startswith(("pillow-", "reportlab-")):
+                        if top not in {"PIL", "pillow.libs", "reportlab", "cv2", "numpy", "numpy.libs", "opencv_python_headless.libs"} and not top.startswith(("pillow-", "reportlab-", "numpy-", "opencv_python_headless-")):
                             continue
                     archive.write(path, ".python_packages/lib/site-packages/" + path.relative_to(packages).as_posix())
     return str(destination)
+
+
+def wait_for_deployment_host(cloud: Cloud, state: dict) -> None:
+    # Site configuration restarts SCM asynchronously; uploading immediately can abort OneDeploy.
+    time.sleep(30)
+    token = cloud.credential.get_token("https://management.azure.com/.default").token
+    url = f"https://{state['appName']}.scm.azurewebsites.net/api/deployments"
+    deadline = time.monotonic() + 180
+    healthy = 0
+    with httpx.Client(timeout=30, headers={"Authorization": "Bearer " + token}) as client:
+        while time.monotonic() < deadline:
+            try:
+                response = client.get(url)
+            except (httpx.TimeoutException, httpx.ConnectError) as error:
+                healthy = 0
+                print(f"Waiting for the deployment host ({type(error).__name__}).", flush=True)
+            else:
+                if response.status_code in {401, 403}:
+                    response.raise_for_status()
+                healthy = healthy + 1 if response.status_code == 200 else 0
+                if healthy >= 3:
+                    return
+            time.sleep(5)
+    raise TimeoutError("The deployment host did not stabilize after site configuration. No package was uploaded.")
 
 
 def icon(size: int, *, outline: bool = False) -> bytes:
@@ -159,7 +190,7 @@ def teams_package(state: dict) -> bytes:
             "supportsFiles": False, "isNotificationOnly": False,
             "commandLists": [{"scopes": ["personal"], "commands": [
                 {"title": "Yesterday's kilometers", "description": "Get total and branch mileage for yesterday"},
-                {"title": "Vehicles needing attention", "description": "Review live battery, tyre and maintenance alerts"},
+                {"title": "Vehicles needing attention", "description": "Review detected incidents and affected rental vehicles"},
                 {"title": "stop briefings", "description": "Pause daily Teams briefings"},
                 {"title": "resume briefings", "description": "Resume daily Teams briefings"},
             ]}],
@@ -251,6 +282,7 @@ def main() -> None:
         raise RuntimeError("--code-only requires --prebuilt.")
     package = deployment_zip(prebuilt=args.prebuilt, code_only=args.code_only)
     configure(cloud, state, prebuilt=args.prebuilt)
+    wait_for_deployment_host(cloud, state)
     previous_deployments = az(
         "webapp", "log", "deployment", "list", "--name", state["appName"],
         "--resource-group", CONFIG["resource_group"], "--subscription", CONFIG["subscription_id"],

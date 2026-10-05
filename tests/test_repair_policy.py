@@ -34,6 +34,14 @@ def test_policy_source_changes_require_word_republication(tmp_path, monkeypatch)
 
 def test_local_word_is_the_exact_published_version():
     reference = repair_policy.policy_reference()
-    payload = repair_policy.POLICY_PATH.with_name("Caldova-Repair-Policy.docx").read_bytes()
+    payload = repair_policy.policy_document().read_bytes()
     assert hashlib.sha256(payload).hexdigest() == reference["document_sha256"]
     assert reference["document_url"].startswith("https://caldova08667473-my.sharepoint.com/")
+
+
+def test_published_word_path_cannot_escape_the_policy_directory(monkeypatch):
+    monkeypatch.setattr(repair_policy, "policy_reference", lambda: {
+        "document_url": "https://caldova08667473-my.sharepoint.com/_layouts/15/Doc.aspx?file=..%5Coutside.docx",
+    })
+    with pytest.raises(ValueError, match="controlled Word file"):
+        repair_policy.policy_document()

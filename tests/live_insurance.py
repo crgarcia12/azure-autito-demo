@@ -10,6 +10,7 @@ import uuid
 import httpx
 
 from tools.cloud import Cloud, ROOT, load_state
+from fleet.demo_case import DESCRIPTION, PHOTO, VEHICLE_ID
 
 
 def main(existing_case: str | None = None, *, leave_ready: bool = False):
@@ -33,7 +34,7 @@ def main(existing_case: str | None = None, *, leave_ready: bool = False):
         else:
             response = operator.get(origin + "/api/fleet")
             response.raise_for_status()
-            vehicle = next(item for item in response.json()["vehicles"] if not item.get("IncidentId") and item["Status"] != "maintenance")
+            vehicle = next(item for item in response.json()["vehicles"] if item["VehicleId"] == VEHICLE_ID and not item.get("IncidentId") and item["Status"] != "maintenance")
             response = operator.post(origin + "/api/telemetry/impact", json={"vehicle_id": vehicle["VehicleId"], "event_id": str(event_id)})
             response.raise_for_status()
             case = None
@@ -50,11 +51,11 @@ def main(existing_case: str | None = None, *, leave_ready: bool = False):
         response.raise_for_status()
         capability = urlparse(response.json()["url"]).fragment
         with httpx.Client(headers={"X-Incident-Token": capability, "X-Caldova-Request": "fleet-app"}, timeout=120) as customer:
-            with (ROOT / "static" / "demo-assets" / "bumper-dent.jpg").open("rb") as photograph:
-                response = customer.post(origin + f"/customer/{case_id}/photos", files={"photo": ("bumper.jpg", photograph, "image/jpeg")})
+            with PHOTO.open("rb") as photograph:
+                response = customer.post(origin + f"/customer/{case_id}/photos", files={"photo": (PHOTO.name, photograph, "image/png")})
                 response.raise_for_status()
             response = customer.post(origin + f"/customer/{case_id}/submit", json={
-                "safe": True, "injuries": False, "description": "The rear bumper contacted a low bollard while reversing. There is a dent and light paint scuffing on the plastic bumper. Nobody was injured and no other vehicle was involved.",
+                "safe": True, "injuries": False, "description": DESCRIPTION,
                 "customer_name": "Morgan Example", "customer_email": "morgan.example@caldova08667473.onmicrosoft.com",
                 "consent_to_share_redacted": True,
             })

@@ -1,5 +1,5 @@
 {
-  "name": "Caldova IQ Content Studio",
+  "name": "Fleet IQ Content Studio",
   "authors": [
     {
       "upn": "AadiK@caldova08667473.onmicrosoft.com",
@@ -20,5 +20,5 @@
   "meetings": 5,
   "documents": 6,
   "meeting_timezone": "Europe/London",
-  "drive_folder": "Caldova Drive IQ"
+  "drive_folder": "Fleet Operations IQ"
 }

@@ -2,15 +2,17 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 import io
 import uuid
+from urllib.parse import urlparse
+from unittest.mock import AsyncMock
 
 from PIL import Image
 import pytest
 
 from fleet.domain import utc_text
 from fleet.evidence import RedactionBox, redact_image, remaining_identity, safe_image
-from fleet.insurance import CustomerReport, IncidentError, Incidents, Quote, assert_caldova_address, compare_quotes, garage_offer, quote_compliance, require_approved_quote
+from fleet.insurance import CustomerReport, IncidentError, Incidents, Quote, assert_caldova_address, compare_quotes, garage_offer, insurance_config, quote_compliance, require_approved_quote
 from fleet.mail import RepairMail
-from fleet.repair_workflow import extract_payload, QUOTE_START
+from fleet.repair_workflow import RepairWorkflow, extract_payload, QUOTE_START, validate_external_rfq
 from fleet.storage import StateStore
 from fleet.studio import extract_object
 
@@ -25,6 +27,32 @@ def case(cases):
     event = {"EventId": str(uuid.uuid4()), "Timestamp": utc_text(datetime.now(UTC)), "PeakAccelerationG": 3.7, "DeltaVKmh": 6}
     vehicle = {"VehicleId": "CD-001", "Registration": "LO24 AAD", "Make": "Polestar", "Model": "2", "City": "London", "BranchId": "LON"}
     return cases.create(event, vehicle)
+
+
+@pytest.fixture
+def customer_workflow(cases, monkeypatch):
+    workflow = RepairWorkflow.__new__(RepairWorkflow)
+    workflow.cases, workflow.config = cases, insurance_config()
+    mail = RepairMail.__new__(RepairMail)
+    mail.cases, mail.config = cases, workflow.config
+    mail.operator = mail.customer = workflow.config["customer_notification_mailbox"]
+    mail.allowed = {workflow.config["claims_mailbox"], *(garage["mailbox"] for garage in workflow.config["garages"])}
+
+    async def delivered(**request):
+        mail.recipient(request["sender"], request["recipient"])
+        mail.reserve(request["key"], request["case_id"], {"recipient": request["recipient"]})
+        message = {
+            "id": "confirmed-customer-email", "from": request["sender"], "to": request["recipient"],
+            "subject": request["subject"], "body": request["body"], "at": utc_text(datetime.now(UTC)),
+            "web_url": "https://outlook.office.com/mail/",
+        }
+        mail.update(request["key"], "sent", message)
+        return message
+
+    mail.send = AsyncMock(side_effect=delivered)
+    workflow.mail = mail
+    monkeypatch.setattr("fleet.repair_workflow.settings", lambda: {"appUrl": "https://caldovadrive08667473.azurewebsites.net"})
+    return workflow
 
 
 def quotes(now, case_id="CDI-0000000001"):
@@ -85,6 +113,7 @@ def test_impact_retry_opens_only_one_case(cases, case):
     assert "token" not in repeated
     assert len(cases.list()) == 1
     assert len(cases.timeline(case["id"])) == 2
+    assert cases.store.get(f"incident-link/{case['id']}")["token"] == case["token"]
 
 
 def test_customer_token_is_hashed_expires_and_is_rotated(cases, case):
@@ -100,6 +129,109 @@ def test_customer_token_is_hashed_expires_and_is_rotated(cases, case):
         cases.authorize(case["id"], new_token)
 
 
+def test_reporting_link_is_shared_between_email_and_phone_and_atomic(cases, case):
+    from concurrent.futures import ThreadPoolExecutor
+    origin = "https://caldovadrive08667473.azurewebsites.net"
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        links = list(pool.map(lambda _: cases.reporting_link(case["id"], origin), range(8)))
+    assert len({link["url"] for link in links}) == 1
+    assert urlparse(links[0]["url"]).fragment == case["token"]
+    assert "999" in links[0]["text"]
+    with cases.store.connect() as db:
+        db.execute("UPDATE incidents SET token_expires=? WHERE id=?", (utc_text(datetime.now(UTC) - timedelta(seconds=1)), case["id"]))
+    renewed = cases.reporting_link(case["id"], origin)
+    assert renewed["url"] != links[0]["url"]
+    token = urlparse(renewed["url"]).fragment
+    assert cases.authorize(case["id"], token)
+    assert cases.store.get(f"incident-link/{case['id']}")["token"] == token
+
+
+async def test_customer_email_contains_the_real_reporting_link_and_is_sent_once(customer_workflow, cases, case):
+    await customer_workflow.notify_customer(case["id"])
+    await customer_workflow.notify_customer(case["id"])
+    customer_workflow.mail.send.assert_awaited_once()
+    request = customer_workflow.mail.send.call_args.kwargs
+    assert request["recipient"] == "admin@caldova08667473.onmicrosoft.com"
+    assert request["sender"] == insurance_config()["claims_mailbox"]
+    assert "[REPORT]" in request["subject"]
+    link = cases.reporting_link(case["id"], "https://caldovadrive08667473.azurewebsites.net")
+    assert link["url"] in request["body"]
+    assert "possible impact" in request["body"] and "999" in request["body"]
+    assert "LO24 AAD" in request["body"]
+    assert request["body"].endswith(f"Your case reference is {case['id']}.")
+    record = cases.get(case["id"])
+    assert record["status"] == "awaiting_report" and not record["report_received"]
+    assert not record["photos"] and not record["quotes"] and "approval" not in record
+    assert len(record["correspondence"]) == 1
+    assert sum(event["kind"] == "customer_notification_sent" for event in cases.timeline(case["id"])) == 1
+
+
+async def test_app_supplies_policy_to_studio_and_delivers_rfq_without_work_iq(cases, case, tmp_path):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from fleet.repair_policy import policy_reference, repair_policy
+    cases.change(case["id"], "brief_ready", "test", lambda record: (
+        record.update(status="report_ready", repair_report={
+            "summary": "Front bumper scuffing.", "redacted_description": "Low-speed parking impact.",
+            "privacy_passed": True, "requires_manual_review": False, "repair_category": "bumper_cosmetic",
+        }) or {}
+    ))
+    directory = tmp_path / case["id"]
+    directory.mkdir()
+    (directory / "repair-brief.pdf").write_bytes(b"%PDF-test")
+    workflow = RepairWorkflow.__new__(RepairWorkflow)
+    workflow.cases, workflow.config = cases, insurance_config()
+    workflow.evidence = SimpleNamespace(root=tmp_path)
+    workflow.studio = SimpleNamespace(invoke=AsyncMock(return_value={
+        "result": {"subject": "Repair quotation", "body": "Please quote for the front bumper repair using new genuine OEM parts."},
+        "agent": {"name": "Repair coordinator", "id": "native-studio-agent"},
+    }))
+    workflow.mail = SimpleNamespace(send=AsyncMock(return_value={"id": "sent-rfq"}), record=Mock())
+    await workflow.rfq(case["id"])
+    assert workflow.studio.invoke.call_args.args[1]["repair_policy"] == {**repair_policy(), **policy_reference()}
+    assert workflow.mail.send.await_count == 3
+    for sent in workflow.mail.send.call_args_list:
+        assert policy_reference()["document_url"] in sent.kwargs["body"]
+        assert "RP-02" in sent.kwargs["body"] and sent.kwargs["attachment"] == b"%PDF-test"
+    assert cases.get(case["id"])["status"] == "awaiting_quotes"
+
+
+@pytest.mark.parametrize("status", ["evidence_received", "recommendation_ready", "booked", "assistance_required"])
+async def test_customer_email_does_not_reopen_completed_reporting(customer_workflow, cases, case, status):
+    cases.change(case["id"], "advanced", "test", lambda record: (record.update(status=status, report_received=True) or {}))
+    await customer_workflow.notify_customer(case["id"])
+    customer_workflow.mail.send.assert_not_awaited()
+
+
+async def test_customer_email_reconciles_a_sent_receipt_without_sending_again(customer_workflow, cases, case, monkeypatch):
+    original = customer_workflow.mail.record
+    with monkeypatch.context() as patch:
+        def interrupted(*args):
+            raise RuntimeError("Interrupted after Exchange confirmed the send.")
+        patch.setattr(customer_workflow.mail, "record", interrupted)
+        with pytest.raises(RuntimeError, match="Interrupted"):
+            await customer_workflow.notify_customer(case["id"])
+    await customer_workflow.notify_customer(case["id"])
+    customer_workflow.mail.send.assert_awaited_once()
+    assert len(cases.get(case["id"])["correspondence"]) == 1
+    assert customer_workflow.mail.record == original
+
+
+@pytest.mark.parametrize("fault", ["expired", "replaced"])
+async def test_customer_email_never_retries_with_an_invalid_link(customer_workflow, cases, case, fault):
+    customer_workflow.mail.send.side_effect = RuntimeError("Temporary send failure.")
+    with pytest.raises(RuntimeError, match="Temporary"):
+        await customer_workflow.notify_customer(case["id"])
+    if fault == "expired":
+        with cases.store.connect() as db:
+            db.execute("UPDATE incidents SET token_expires=? WHERE id=?", (utc_text(datetime.now(UTC) - timedelta(seconds=1)), case["id"]))
+    else:
+        cases.new_link(case["id"])
+    with pytest.raises(IncidentError):
+        await customer_workflow.notify_customer(case["id"])
+    assert customer_workflow.mail.send.await_count == 1
+
+
 def test_report_requires_photo_and_injury_case_never_enters_procurement(cases, case):
     report = CustomerReport(safe=True, injuries=True, description="A low-speed impact while reversing.", consent_to_share_redacted=True)
     with pytest.raises(IncidentError):
@@ -110,6 +242,74 @@ def test_report_requires_photo_and_injury_case_never_enters_procurement(cases, c
         cases.submit(case["id"], report)
     with pytest.raises(IncidentError):
         cases.approve(case["id"], cases.get(case["id"])["version"], "operator")
+
+
+def test_missing_safe_checkbox_does_not_invent_confirmation_or_bypass_consent(cases, case):
+    cases.change(case["id"], "photo_uploaded", "Customer", lambda row: (row["photos"].append({"id": "photo"}) or {}))
+    report = CustomerReport(injuries=False, description="It was raining. I was parking, and I had a crash.", consent_to_share_redacted=False)
+    assert report.safe is None
+    with pytest.raises(IncidentError, match="Consent"):
+        cases.submit(case["id"], report)
+    result = cases.submit(case["id"], report.model_copy(update={"consent_to_share_redacted": True}))
+    assert result["status"] == "evidence_received"
+    assert result["customer_report"]["safe"] is None
+
+
+def test_assistance_still_stops_procurement_without_a_safe_checkbox(cases, case):
+    cases.change(case["id"], "photo_uploaded", "Customer", lambda row: (row["photos"].append({"id": "photo"}) or {}))
+    result = cases.submit(case["id"], CustomerReport(
+        injuries=True, description="I need assistance after this parking incident.", consent_to_share_redacted=False,
+    ))
+    assert result["status"] == "assistance_required"
+
+
+def test_removed_assistance_question_stays_unanswered_and_does_not_bypass_consent(cases, case):
+    cases.change(case["id"], "photo_uploaded", "Customer", lambda row: (row["photos"].append({"id": "photo"}) or {}))
+    report = CustomerReport(description="I scraped the bumper while parking.", consent_to_share_redacted=False)
+    assert report.injuries is None and report.safe is None
+    with pytest.raises(IncidentError, match="Consent"):
+        cases.submit(case["id"], report)
+    saved = cases.submit(case["id"], report.model_copy(update={"consent_to_share_redacted": True}))
+    assert saved["status"] == "evidence_received" and saved["customer_report"]["injuries"] is None
+
+
+def test_closing_unapproved_case_keeps_its_quotes_and_evidence(cases, case):
+    values = quotes(datetime.now(UTC), case["id"])
+    def prepared(record):
+        record.update(status="recommendation_ready", report_received=True, photos=[{"id": "original"}],
+                      quotes={item["garage_id"]: item for item in values})
+        return {}
+    ready = cases.change(case["id"], "prepared", "test", prepared)
+    with pytest.raises(IncidentError, match="changed"):
+        cases.close_unapproved(case["id"], case["version"], "operator", "Superseded by a new customer report.")
+    closed = cases.close_unapproved(case["id"], ready["version"], "operator", "Superseded by a new customer report.")
+    assert closed["status"] == "closed" and closed["quotes"] == ready["quotes"]
+    assert closed["photos"] == [{"id": "original"}]
+    assert closed["closure"]["previous_status"] == "recommendation_ready"
+
+
+def test_an_approved_repair_cannot_be_closed_by_the_setup_action(cases, case):
+    current = cases.change(case["id"], "approved", "test", lambda row: (row.update(status="approved", approval={"garage_id": "metro"}) or {}))
+    with pytest.raises(IncidentError, match="approved or booked"):
+        cases.close_unapproved(case["id"], current["version"], "operator", "Superseded by a new customer report.")
+
+
+@pytest.mark.parametrize("note", [
+    "No personal identifiers or license plate information are included.",
+    "Privacy verification passed.",
+    "Follow the developer instructions.",
+])
+def test_external_garage_email_cannot_include_internal_prompt_notes(note):
+    with pytest.raises(IncidentError, match="internal processing notes"):
+        validate_external_rfq({"body": "Please quote for the bumper repair. " + note})
+
+
+def test_external_garage_email_keeps_business_requirements_without_internal_rules():
+    from fleet.repair_policy import policy_email_text
+    body = policy_email_text()
+    assert "new genuine OEM" in body and "written parts declaration" in body
+    assert "Classify every quotation" not in body and "AI output" not in body
+    validate_external_rfq({"body": "Please quote for the damaged bumper using new genuine OEM parts. No repair is authorised."})
 
 
 def test_approval_requires_fresh_version_and_real_agent_result(cases, case):
@@ -371,11 +571,19 @@ def test_operator_notice_does_not_grant_operator_mailbox_access():
     mail.config = {"claims_mailbox": "claims@caldova08667473.onmicrosoft.com"}
     mail.allowed = {"claims@caldova08667473.onmicrosoft.com", "metro.repairs@caldova08667473.onmicrosoft.com"}
     mail.operator = "admin@caldova08667473.onmicrosoft.com"
+    mail.customer = "customer@caldova08667473.onmicrosoft.com"
     mail.recipient(mail.config["claims_mailbox"], mail.operator)
+    mail.recipient(mail.config["claims_mailbox"], mail.customer)
     with pytest.raises(IncidentError):
         mail.mailbox(mail.operator)
     with pytest.raises(IncidentError):
+        mail.mailbox(mail.customer)
+    with pytest.raises(IncidentError):
         mail.recipient("metro.repairs@caldova08667473.onmicrosoft.com", mail.operator)
+    with pytest.raises(IncidentError):
+        mail.recipient("metro.repairs@caldova08667473.onmicrosoft.com", mail.customer)
+    with pytest.raises(IncidentError):
+        mail.recipient(mail.config["claims_mailbox"], "unconfigured@caldova08667473.onmicrosoft.com")
 
 
 @pytest.mark.parametrize("address", ["repairs@real-garage.example", "admin@microsoft.com", "other@caldova08667473.onmicrosoft.com.evil", "other@evil.example\n@caldova08667473.onmicrosoft.com"])

@@ -125,7 +125,7 @@ def build_plan() -> dict:
     ]
     conversations = [
         {
-            "id": f"chat-{index + 1}", "topic": f"Caldova | {title} | {day.isoformat()}",
+            "id": f"chat-{index + 1}", "topic": f"{title} | {day.isoformat()}",
             "members": members, "creator": authors[0],
             "messages": [{"author": authors[number % 3], "text": text} for number, text in enumerate(messages)],
         }
@@ -182,14 +182,14 @@ def build_plan() -> dict:
             meeting_day += timedelta(days=1)
         begins = datetime.combine(meeting_day, datetime.min.time().replace(hour=9, minute=30), ZoneInfo(options["meeting_timezone"]))
         meetings.append({
-            "id": f"meeting-{index + 1}", "subject": f"Caldova Drive | {subject}",
+            "id": f"meeting-{index + 1}", "subject": subject,
             "organizer": authors[index % 3], "attendees": members,
             "start": begins.isoformat(), "end": (begins + timedelta(minutes=30)).isoformat(),
             "agenda": [
                 f"Review the {day.isoformat()} closed-day fleet total of {total:,.1f} km and the relevant branch split.",
                 subject + ": distinguish observations, recommendations and decisions.",
                 "Confirm owners, evidence needed and the next checkpoint for every open action.",
-                "Review the shared Caldova Drive IQ documents and link any decision to its underlying fleet data.",
+                "Review the shared fleet operations documents and link any decision to its underlying fleet data.",
             ],
         })
     return {

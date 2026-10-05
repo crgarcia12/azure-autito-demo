@@ -3,6 +3,7 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 
 from fleet.domain import RoadRoute, VehicleMotion, day_bounds, fleet_vehicles, previous_day
+from fleet.demo_case import VEHICLE_DETAILS, VEHICLE_ID
 
 
 @pytest.fixture
@@ -16,7 +17,17 @@ def test_fleet_has_unique_registrations_and_identifiers():
     assert len(fleet) == 40
     assert len({v["VehicleId"] for v in fleet}) == len(fleet)
     assert len({v["Registration"] for v in fleet}) == len(fleet)
-    assert {v["City"] for v in fleet} == {"London", "Manchester", "Birmingham", "Bristol", "Leeds", "Edinburgh"}
+    assert {v["City"] for v in fleet} == {"London", "Manchester", "Birmingham", "Bristol", "Leeds", "Edinburgh", "Stornoway"}
+
+
+def test_green_mini_matches_the_supplied_photo_without_changing_its_motion():
+    vehicle = next(row for row in fleet_vehicles() if row["VehicleId"] == VEHICLE_ID)
+    assert all(vehicle[key] == value for key, value in VEHICLE_DETAILS.items())
+    assert vehicle["Index"] == 5 and vehicle["BranchId"] == "LON"
+    route = RoadRoute("LON", [(51.5, -.1), (51.51, -.1)], 300)
+    start = datetime(2026, 10, 4, 10, tzinfo=UTC)
+    previous = {**vehicle, "Make": "Toyota", "Model": "Corolla", "Powertrain": "Hybrid"}
+    assert VehicleMotion(vehicle, route).sample(start, start + timedelta(seconds=15)) == VehicleMotion(previous, route).sample(start, start + timedelta(seconds=15))
 
 
 @pytest.mark.parametrize("day,hours", [(date(2026, 3, 29), 23), (date(2026, 10, 25), 25), (date(2026, 9, 28), 24)])
@@ -51,7 +62,22 @@ def test_parked_vehicles_never_accumulate_distance():
     start = datetime(2026, 9, 29, 8, tzinfo=UTC)
     event = motion.sample(start, start + timedelta(days=1))
     assert event.DistanceKm == event.SpeedKmh == 0
-    assert event.Status == "maintenance"
+    assert event.Status == "on-hire"
+    assert event.RentalId and not event.Alert
+
+
+def test_all_cars_remain_on_hire_without_unrelated_alerts():
+    route = RoadRoute("LON", [(51.5, -.1), (51.51, -.1)], 300)
+    start = datetime(2026, 10, 5, tzinfo=UTC)
+    for vehicle in fleet_vehicles():
+        motion = VehicleMotion(vehicle, route)
+        for offset in range(0, 86400, 900):
+            instant = start + timedelta(seconds=offset)
+            event = motion.sample(instant, instant + timedelta(seconds=15))
+            assert event.Status == "on-hire" and event.Alert == ""
+            assert event.RentalId == f"R-{vehicle['Index'] + 10401}"
+            assert event.BatteryPct is None or event.BatteryPct >= 20
+            assert event.TyrePressureBar >= 1.9
 
 
 def test_odometer_never_goes_backwards(motion):

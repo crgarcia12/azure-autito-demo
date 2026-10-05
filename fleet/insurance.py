@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from fleet.config import ROOT
+from fleet.demo_case import CUSTOMER_EMAIL, CUSTOMER_NAME, VEHICLE_ID
 from fleet.domain import parse_time, utc_text
 from fleet.repair_policy import ReplacementPart, evaluate_parts, policy_reference, repair_policy
 from fleet.storage import StateStore
@@ -23,7 +24,7 @@ from fleet.storage import StateStore
 
 def insurance_config() -> dict:
     config = json.loads((ROOT / "insurance.config.json").read_text(encoding="utf-8"))
-    for address in [config["claims_mailbox"], *(garage["mailbox"] for garage in config["garages"])]:
+    for address in [config["claims_mailbox"], config["customer_notification_mailbox"], *(garage["mailbox"] for garage in config["garages"])]:
         assert_caldova_address(address)
     policy = repair_policy()
     if any(config[key] != policy[key] for key in ("currency", "downtime_cost_per_day", "maximum_repair_quote")):
@@ -33,7 +34,7 @@ def insurance_config() -> dict:
 
 def assert_caldova_address(address: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*@caldova08667473\.onmicrosoft\.com", address, re.IGNORECASE):
-        raise IncidentError("All workflow email addresses must remain in the approved Caldova tenant.", 403)
+        raise IncidentError("All workflow email addresses must remain in the approved tenant.", 403)
     return address.casefold()
 
 
@@ -45,8 +46,8 @@ class IncidentError(ValueError):
 
 class CustomerReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    safe: bool
-    injuries: bool
+    safe: bool | None = None
+    injuries: bool | None = None
     description: str = Field(min_length=15, max_length=5000)
     customer_name: str = Field(default="", max_length=150)
     customer_email: str = Field(default="", max_length=254)
@@ -111,13 +112,13 @@ def garage_offer(garage_id: str, case_id: str, received_at: datetime, *, vehicle
     manufacturer = garage.get("parts_manufacturer", maker)
     genuine = garage["parts_origin"] == "genuine_oem"
     statement = (
-        f"We propose a new genuine {maker} OEM rear bumper cover, supplied through the vehicle manufacturer's "
+        f"We propose a new genuine {maker} OEM bumper cover, supplied through the vehicle manufacturer's "
         "authorised parts network and approved by the vehicle manufacturer for this vehicle. "
         "No aftermarket, used, refurbished or remanufactured substitutions are included."
         if genuine else
-        f"We propose a new {manufacturer} aftermarket rear bumper cover. This is a non-OEM pattern part, "
+        f"We propose a new {manufacturer} aftermarket bumper cover. This is a non-OEM pattern part, "
         "not a genuine vehicle-manufacturer part. Its lower supply cost and stock availability allow our lower price and earlier return. "
-        "This offer does not meet Caldova's new genuine OEM requirement; no compliant alternative is included."
+        "This offer does not meet the new genuine OEM requirement; no compliant alternative is included."
     )
     return {
         "garage_id": garage_id, "case_id": case_id,
@@ -125,11 +126,11 @@ def garage_offer(garage_id: str, case_id: str, received_at: datetime, *, vehicle
         "available_from": starts.isoformat(), "ready_by": ends.isoformat(),
         "valid_until": utc_text(received_at + timedelta(days=config["quote_validity_days"])),
         "warranty_months": garage["warranty_months"],
-        "scope": "Rear bumper cover replacement and refinishing, including the declared parts, materials, labour and VAT.",
+        "scope": "Damaged bumper cover replacement and refinishing, including the declared parts, materials, labour and VAT.",
         "exclusions": "Subject to physical inspection and final part-number/fitment confirmation. Structural, sensor, electrical and concealed damage require a revised quotation.",
         "replacement_parts_required": True,
         "replacement_parts": [{
-            "component": "Rear bumper cover", "manufacturer": manufacturer,
+            "component": "Bumper cover", "manufacturer": manufacturer,
             "origin": garage["parts_origin"], "condition": "new", "approved_for_vehicle": genuine,
         }],
         "parts_statement": statement, "policy_id": policy["id"], "policy_version": policy["version"],
@@ -242,6 +243,13 @@ def compare_quotes(quotes: list[dict], detected_at: str, *, now: datetime | None
     }
 
 
+INACTIVE_STATUSES = frozenset({"closed", "not_an_incident", "archived"})
+
+
+class RetiredImpact(IncidentError):
+    pass
+
+
 class Incidents:
     def __init__(self, store: StateStore):
         self.store = store
@@ -270,11 +278,15 @@ class Incidents:
             public = {key: result[key] for key in ("id", "vehicle_id", "created_at", "status", "vehicle", "report_received") if key in result}
             public["photo_count"] = len(record.get("photos", []))
             public["follow_up"] = record.get("follow_up", "")
+            public["report_defaults"] = {
+                "customer_name": CUSTOMER_NAME, "customer_email": CUSTOMER_EMAIL, "description": "",
+            }
             if result.get("booking"):
                 garage = next(item for item in insurance_config()["garages"] if item["id"] == result["booking"]["garage_id"])
                 public["booking"] = {"garage_name": garage["name"], "ready_by": result["booking"]["ready_by"]}
             return public
         result["repair_policy"] = policy_reference()
+        result["customer_simulation_available"] = record.get("vehicle_id") == VEHICLE_ID
         result["quote_compliance"] = {
             garage: quote_compliance(Quote.model_validate(quote)) for garage, quote in record.get("quotes", {}).items()
         }
@@ -291,9 +303,12 @@ class Incidents:
         with self.store.connect() as db:
             return self._row(db.execute("SELECT * FROM incidents WHERE id=?", (case_id,)).fetchone())
 
-    def list(self) -> list[dict]:
+    def list(self, *, include_archived: bool = False) -> list[dict]:
         with self.store.connect() as db:
-            return [self.public(self._row(row)) for row in db.execute("SELECT * FROM incidents ORDER BY created_at DESC LIMIT 100")]
+            query = "SELECT * FROM incidents"
+            if not include_archived:
+                query += " WHERE status != 'archived'"
+            return [self.public(self._row(row)) for row in db.execute(query + " ORDER BY created_at DESC")]
 
     def timeline(self, case_id: str) -> list[dict]:
         with self.store.connect() as db:
@@ -305,7 +320,7 @@ class Incidents:
         token = secrets.token_urlsafe(32)
         now = utc_text(datetime.now(UTC))
         data = {
-            "vehicle": {key: vehicle[key] for key in ("Registration", "Make", "Model", "City", "BranchId")},
+            "vehicle": {**{key: vehicle[key] for key in ("Registration", "Make", "Model", "City", "BranchId")}, "Colour": vehicle.get("Colour", "")},
             "telemetry": event, "report_received": False, "photos": [], "quotes": {}, "correspondence": [],
         }
         with self.store.connect() as db:
@@ -313,12 +328,16 @@ class Incidents:
             existing = db.execute("SELECT * FROM incidents WHERE source_event=?", (event["EventId"],)).fetchone()
             if existing:
                 return self.public(self._row(existing))
+            reset = self.store.get("impact-reset.json", connection=db)
+            if reset and parse_time(event["Timestamp"]) < parse_time(reset["not_before"]):
+                raise RetiredImpact("This impact belongs to an earlier demo run and cannot reopen a deleted case.", 410)
             db.execute("INSERT INTO incidents VALUES (?,?,?,?,?,?,?,?,?,?)", (
                 case_id, event["EventId"], vehicle["VehicleId"], now, now, "awaiting_report", 1,
                 hashlib.sha256(token.encode()).hexdigest(),
                 utc_text(datetime.now(UTC) + timedelta(hours=insurance_config()["customer_link_hours"])),
                 json.dumps(data),
             ))
+            self.store.put(f"incident-link/{case_id}", {"token": token}, connection=db)
             self._event(db, case_id, "impact_detected", "Microsoft Fabric", {
                 "event_id": event["EventId"], "peak_g": event["PeakAccelerationG"], "delta_v_kmh": event["DeltaVKmh"],
             })
@@ -332,19 +351,42 @@ class Incidents:
         if not token or not hmac.compare_digest(hashlib.sha256(token.encode()).hexdigest(), record["token_hash"]):
             raise IncidentError("This reporting link is invalid.", 403)
         if parse_time(record["token_expires"]) <= datetime.now(UTC):
-            raise IncidentError("This reporting link has expired. Contact Caldova for a new link.", 403)
+            raise IncidentError("This reporting link has expired. Contact rental support for a new link.", 403)
         return record
 
     def new_link(self, case_id: str) -> str:
-        token = secrets.token_urlsafe(32)
         with self.store.connect() as db:
-            changed = db.execute(
-                "UPDATE incidents SET token_hash=?,token_expires=? WHERE id=?",
-                (hashlib.sha256(token.encode()).hexdigest(), utc_text(datetime.now(UTC) + timedelta(hours=24)), case_id),
-            ).rowcount
-            if changed != 1:
-                raise IncidentError("Incident not found.", 404)
-        return token
+            db.execute("BEGIN IMMEDIATE")
+            return self._new_link(db, case_id)["token"]
+
+    def _new_link(self, db: sqlite3.Connection, case_id: str) -> dict:
+        token = secrets.token_urlsafe(32)
+        expires = utc_text(datetime.now(UTC) + timedelta(hours=insurance_config()["customer_link_hours"]))
+        changed = db.execute(
+            "UPDATE incidents SET token_hash=?,token_expires=? WHERE id=?",
+            (hashlib.sha256(token.encode()).hexdigest(), expires, case_id),
+        ).rowcount
+        if changed != 1:
+            raise IncidentError("Incident not found.", 404)
+        self.store.put(f"incident-link/{case_id}", {"token": token}, connection=db)
+        return {"token": token, "expires_at": expires}
+
+    def reporting_link(self, case_id: str, app_url: str) -> dict:
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            record = self._row(db.execute("SELECT * FROM incidents WHERE id=?", (case_id,)).fetchone())
+            saved = self.store.get(f"incident-link/{case_id}", connection=db)
+            token = saved.get("token", "") if saved else ""
+            valid = (
+                token and hmac.compare_digest(hashlib.sha256(token.encode()).hexdigest(), record["token_hash"])
+                and parse_time(record["token_expires"]) > datetime.now(UTC)
+            )
+            link = {"token": token, "expires_at": record["token_expires"]} if valid else self._new_link(db, case_id)
+        return {
+            "url": app_url.rstrip("/") + f"/report/{case_id}#{link['token']}",
+            "text": "We detected a possible impact involving your rental car. In an emergency call 999. When it is safe, use this link to report the incident.",
+            "expires_at": link["expires_at"],
+        }
 
     def change(self, case_id: str, kind: str, actor: str, transform, *, version: int | None = None) -> dict:
         with self.store.connect() as db:
@@ -369,8 +411,8 @@ class Incidents:
                    (case_id, utc_text(datetime.now(UTC)), kind, actor, json.dumps(details, sort_keys=True)))
 
     def submit(self, case_id: str, report: CustomerReport) -> dict:
-        if not report.consent_to_share_redacted and report.safe and not report.injuries:
-            raise IncidentError("Consent is required before sharing a repair brief. Contact Caldova for assistance if you prefer not to share.", 400)
+        if not report.consent_to_share_redacted and report.safe is not False and not report.injuries:
+            raise IncidentError("Consent is required before sharing a repair brief. Contact rental support if you prefer not to share.", 400)
         def transform(record):
             if record["status"] != "awaiting_report":
                 raise IncidentError("This incident report has already been submitted.")
@@ -378,9 +420,25 @@ class Incidents:
                 raise IncidentError("Add at least one incident photo before submitting.", 400)
             record["customer_report"] = report.model_dump()
             record["report_received"] = True
-            record["status"] = "assistance_required" if report.injuries or not report.safe else "evidence_received"
+            record["status"] = "assistance_required" if report.injuries or report.safe is False else "evidence_received"
+            weather = self.store.get(f"incident-weather/{case_id}")
+            if weather:
+                record["weather_context"] = weather
             return {"safe": report.safe, "injuries": report.injuries, "photo_count": len(record["photos"])}
         return self.change(case_id, "customer_reported", "Customer", transform)
+
+    def close_unapproved(self, case_id: str, version: int, operator: str, reason: str) -> dict:
+        if not 15 <= len(reason.strip()) <= 500:
+            raise IncidentError("Provide a reason for closing this case.", 400)
+        def transform(record):
+            if record.get("approval") or record.get("booking"):
+                raise IncidentError("An approved or booked repair cannot be closed through this action.")
+            if record["status"] in {"closed", "not_an_incident"}:
+                raise IncidentError("This case is already closed.")
+            record["closure"] = {"by": operator, "at": utc_text(datetime.now(UTC)), "reason": reason.strip(), "previous_status": record["status"]}
+            record["status"] = "closed"
+            return record["closure"]
+        return self.change(case_id, "case_closed", operator, transform, version=version)
 
     def add_quote(self, quote: Quote, original_email: dict) -> dict:
         config = insurance_config()
@@ -399,7 +457,7 @@ class Incidents:
             else:
                 record["status"] = "awaiting_quotes"
             return {"garage_id": quote.garage_id, "email_id": quote.email_id, "agent_id": quote.agent_id}
-        return self.change(quote.case_id, "quote_received", "Copilot Studio", transform)
+        return self.change(quote.case_id, "quote_received", "Repair agent", transform)
 
     def approve(self, case_id: str, version: int, operator: str, garage_id: str | None = None, reason: str = "") -> dict:
         reason = reason.strip()

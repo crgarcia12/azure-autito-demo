@@ -58,4 +58,4 @@ beginDialog:
       id: sendMessage_s39DCt
       conversationOutcome: Escalated
       activity: |-
-        A Caldova operations specialist must review this case at https://caldovadrive08667473.azurewebsites.net/#incidents. No repair has been authorised by this response.
+        An operations specialist must review this case. No repair has been authorised by this response.

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from fleet.foundry import FoundryEvidenceAgent, validate_project_endpoint
+from fleet.foundry import AGENT_INSTRUCTIONS, FoundryEvidenceAgent, validate_project_endpoint
 
 
 CONFIG = {
@@ -12,6 +12,11 @@ CONFIG = {
     "foundry_agent_name": "caldova-incident-evidence",
     "foundry_agent_version": "2",
 }
+
+
+def test_evidence_instructions_start_with_the_task_not_the_removed_intro():
+    assert AGENT_INSTRUCTIONS.startswith("Perform the application's requested evidence task:")
+    assert "You are" not in AGENT_INSTRUCTIONS
 
 
 @pytest.mark.parametrize("endpoint", [
@@ -52,6 +57,7 @@ def test_actual_agent_endpoint_not_raw_model_endpoint(monkeypatch):
     assert body["input"][0]["type"] == "message"
     assert body["input"][1]["content"][1]["type"] == "input_image"
     assert body["input"][1]["content"][1]["image_url"].startswith("data:image/jpeg;base64,")
+    assert body["tool_choice"] == "none"
     assert result.data == {"usable": True}
     assert result.trace["provider"] == "Microsoft Foundry Agent Service"
     assert result.trace["agent_version"] == "2"
@@ -70,4 +76,16 @@ def test_incomplete_or_invalid_agent_outputs_are_not_success_shaped(monkeypatch,
     ))
     agent = FoundryEvidenceAgent(CONFIG, SimpleNamespace(get_token=lambda _: SimpleNamespace(token="unit-test-token")))
     with pytest.raises(RuntimeError):
+        agent.invoke("Return JSON.", "Inspect evidence.")
+
+
+def test_foundry_error_details_are_visible_in_the_case_instead_of_only_http_400(monkeypatch):
+    real_client = httpx.Client
+    monkeypatch.setattr("fleet.foundry.httpx.Client", lambda **kwargs: real_client(
+        transport=httpx.MockTransport(lambda _: httpx.Response(400, json={
+            "error": {"message": "The connected tool requires delegated user authentication."},
+        })), **kwargs,
+    ))
+    agent = FoundryEvidenceAgent(CONFIG, SimpleNamespace(get_token=lambda _: SimpleNamespace(token="unit-test-token")))
+    with pytest.raises(RuntimeError, match="requires delegated user authentication"):
         agent.invoke("Return JSON.", "Inspect evidence.")

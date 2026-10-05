@@ -59,15 +59,20 @@ class StateStore:
     def connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=30)
 
-    def get(self, name: str) -> dict[str, Any] | list | None:
-        with self.connect() as db:
-            row = db.execute("SELECT value FROM state WHERE name = ?", (name,)).fetchone()
-            return json.loads(row[0]) if row else None
+    def get(self, name: str, *, connection: sqlite3.Connection | None = None) -> dict[str, Any] | list | None:
+        if connection is None:
+            with self.connect() as db:
+                return self.get(name, connection=db)
+        row = connection.execute("SELECT value FROM state WHERE name = ?", (name,)).fetchone()
+        return json.loads(row[0]) if row else None
 
-    def put(self, name: str, value: Any) -> None:
+    def put(self, name: str, value: Any, *, connection: sqlite3.Connection | None = None) -> None:
+        if connection is None:
+            with self.connect() as db:
+                self.put(name, value, connection=db)
+            return
         payload = json.dumps(value, separators=(",", ":"), allow_nan=False)
-        with self.connect() as db:
-            db.execute("INSERT INTO state VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value", (name, payload))
+        connection.execute("INSERT INTO state VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET value = excluded.value", (name, payload))
 
     def create(self, name: str, value: Any) -> bool:
         with self.connect() as db:

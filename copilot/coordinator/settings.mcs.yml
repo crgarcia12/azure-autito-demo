@@ -1,4 +1,4 @@
-displayName: Caldova Repair Coordinator
+displayName: Claims Coordinator
 schemaName: cdv_repaircoordinator
 accessControlPolicy: GroupMembership
 authenticationMode: None
@@ -21,6 +21,6 @@ configuration:
   recognizer:
     kind: GenerativeAIRecognizer
 
-publishedOn: 2026-09-30T23:31:01.0000000Z
+publishedOn: 2026-10-04T20:36:01.0000000Z
 template: default-2.1.0
 language: 1033

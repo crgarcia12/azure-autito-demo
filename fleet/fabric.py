@@ -12,7 +12,8 @@ from azure.kusto.data.data_format import DataFormat
 from azure.kusto.ingest import IngestionProperties, ManagedStreamingIngestClient, StreamDescriptor
 from azure.kusto.ingest.base_ingest_client import IngestionStatus
 from azure.storage.filedatalake import DataLakeServiceClient
-from deltalake import write_deltalake
+from deltalake import DeltaTable, write_deltalake
+from deltalake.exceptions import TableNotFoundError
 import pyarrow as pa
 
 from fleet.config import ROOT, data_credential, settings
@@ -38,7 +39,7 @@ def repair_quote_fact(case: dict, quote: dict, config: dict) -> dict:
     recorded = next((item.get("compliance") for item in decision.get("quotes", []) if item["garage_id"] == quote["garage_id"]), None)
     compliance = recorded or (
         {"status": "not_assessed_historical", "eligible": False, "findings": []}
-        if case["status"] in {"booked", "closed"} else quote_compliance(Quote.model_validate(quote))
+        if case["status"] in {"booked", "closed", "archived"} else quote_compliance(Quote.model_validate(quote))
     )
     message = next((item for item in case.get("correspondence", []) if item["id"] == quote["email_id"]), {})
     return {
@@ -143,19 +144,15 @@ class FabricData:
             {"fromUtc": utc_text(start), "toUtc": utc_text(end)},
         )
 
-    def history(self, vehicle_id: str) -> list[dict]:
+    def history(self, vehicle_id: str, *, since: datetime | None = None) -> list[dict]:
         return self.query(
-            "declare query_parameters(vehicle:string); FleetEvents() | where VehicleId == vehicle and Timestamp > ago(2h) | summarize arg_max(Timestamp, *) by bin(Timestamp, 1m) | order by Timestamp asc | project Timestamp, Latitude, Longitude, SpeedKmh, BatteryPct, FuelPct",
-            {"vehicle": vehicle_id},
+            "declare query_parameters(vehicle:string, fromUtc:datetime); FleetEvents() | where VehicleId == vehicle and Timestamp > ago(2h) and Timestamp >= fromUtc | summarize arg_max(Timestamp, *) by bin(Timestamp, 1m) | order by Timestamp asc | project Timestamp, Latitude, Longitude, SpeedKmh, BatteryPct, FuelPct",
+            {"vehicle": vehicle_id, "fromUtc": utc_text(since or datetime.now(UTC) - timedelta(hours=2))},
         )
 
     def write_table(self, name: str, rows: list[dict]) -> None:
-        if not rows:
+        if not rows and name not in {"Incidents", "RepairQuotes"}:
             raise ValueError(f"Refusing to replace Lakehouse table {name} with an empty result.")
-        table = pa.Table.from_pylist(rows)
-        for i, field in enumerate(table.schema):
-            if pa.types.is_null(field.type):
-                table = table.set_column(i, field.name, table.column(i).cast(pa.float64()))
         options = {
             "azure_storage_account_name": "onelake",
             "azure_use_fabric_endpoint": "true",
@@ -165,6 +162,18 @@ class FabricData:
             f"abfss://{self.config['workspace_id']}@onelake.dfs.fabric.microsoft.com/"
             f"{self.config['lakehouse_id']}/Tables/{name}"
         )
+        if rows:
+            table = pa.Table.from_pylist(rows)
+            for i, field in enumerate(table.schema):
+                if pa.types.is_null(field.type):
+                    table = table.set_column(i, field.name, table.column(i).cast(pa.float64()))
+        else:
+            try:
+                existing = DeltaTable(url, storage_options=options)
+            except TableNotFoundError:
+                # An unused case table has no stale rows to remove.
+                return
+            table = pa.Table.from_batches([], schema=pa.schema(existing.schema().to_arrow()))
         write_deltalake(
             url, table, mode="overwrite", schema_mode="merge",
             storage_options=options, configuration={"delta.enableChangeDataFeed": "false"},
@@ -178,7 +187,8 @@ class FabricData:
             "VehicleState": self.latest(),
             "DailyMileage": mileage,
         }
-        cases = Incidents(StateStore()).list()
+        cases = Incidents(StateStore()).list(include_archived=True)
+        tables["Incidents"], tables["RepairQuotes"] = [], []
         if cases:
             tables["Incidents"] = [{
                 "CaseId": case["id"], "VehicleId": case["vehicle_id"],
@@ -202,8 +212,7 @@ class FabricData:
             } for case in cases]
             policy = insurance_config()
             quotes = [repair_quote_fact(case, quote, policy) for case in cases for quote in case["quotes"].values()]
-            if quotes:
-                tables["RepairQuotes"] = quotes
+            tables["RepairQuotes"] = quotes
         for name, rows in tables.items():
             self.write_table(name, rows)
         return {"asOf": utc_text(datetime.now(UTC)), "rows": {name: len(rows) for name, rows in tables.items()}}

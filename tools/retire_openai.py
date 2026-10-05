@@ -48,7 +48,7 @@ def main():
     for _ in range(24):
         try:
             response = httpx.get(state["appUrl"] + "/health/live", timeout=20)
-            if response.is_success and response.json().get("service") == "Caldova Drive":
+            if response.is_success and response.json().get("service") in {"Fleet Operations", "Caldova Drive"}:
                 ready = True
                 break
         except (httpx.TimeoutException, httpx.ConnectError):

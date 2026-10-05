@@ -25,7 +25,8 @@ from fleet.fabric import FabricData
 from fleet.simulator import motions, tick
 from fleet.storage import LeaseBusyError, StateStore
 from fleet.teams import TeamsAgent
-from fleet.insurance import IncidentError
+from fleet.insurance import INACTIVE_STATUSES, IncidentError
+from fleet.demo_case import POSITION_KEY, VEHICLE_ID
 from fleet.incident_routes import attach as attach_incidents, detect_impacts
 
 LOG = logging.getLogger("caldova")
@@ -68,7 +69,7 @@ async def access(request, handler):
     if os.environ.get("WEBSITE_INSTANCE_ID") and not customer_path:
         principal = request.headers.get("X-MS-CLIENT-PRINCIPAL")
         if not principal:
-            raise web.HTTPUnauthorized(text="Sign in to the Caldova demo tenant.")
+            raise web.HTTPUnauthorized(text="Sign in with the configured operator account.")
         try:
             claims = json.loads(base64.b64decode(principal))["claims"]
             ids = {claim["val"] for claim in claims if claim["typ"].endswith("objectidentifier") or claim["typ"] == "oid"}
@@ -77,7 +78,7 @@ async def access(request, handler):
             raise web.HTTPUnauthorized() from error
         config = request.app["config"]
         if config["admin_object_id"] not in ids or config["tenant_id"] not in tenants:
-            raise web.HTTPForbidden(text="This fleet workspace is restricted to its configured Caldova demo operator.")
+            raise web.HTTPForbidden(text="This fleet workspace is restricted to its configured operator.")
     if request.method == "POST" and request.path != "/api/messages":
         if request.headers.get("X-Caldova-Request") != "fleet-app":
             raise web.HTTPForbidden(text="Missing same-origin request header.")
@@ -133,14 +134,15 @@ def snapshot(app) -> dict:
     delivery = store.get("last-delivery.json")
     open_cases = {}
     for case in app["incidents"].list():
-        if case["status"] not in {"closed", "not_an_incident"}:
+        if case["status"] not in INACTIVE_STATUSES:
             open_cases.setdefault(case["vehicle_id"], case)
     for vehicle in vehicles:
         if vehicle["VehicleId"] in open_cases:
             case = open_cases[vehicle["VehicleId"]]
             vehicle["IncidentId"] = case["id"]
             vehicle["IncidentStatus"] = case["status"]
-            vehicle["Alert"] = "Repair approval needed" if case["status"] == "recommendation_ready" else "Incident under review"
+            vehicle["Status"] = "incident"
+            vehicle["Alert"] = "Incident detected"
     return {
         "asOf": utc_text(datetime.now(UTC)), "vehicles": vehicles,
         "yesterday": {"reportDate": day.isoformat(), "totalKm": math.fsum(row["DistanceKm"] for row in mileage)},
@@ -166,7 +168,9 @@ async def history_endpoint(request):
     vehicle = request.match_info["vehicle"]
     if not re.fullmatch(r"CD-\d{3}", vehicle):
         raise web.HTTPBadRequest(text="Invalid vehicle identifier.")
-    points = await asyncio.to_thread(request.app["data"].history, vehicle)
+    position = request.app["store"].get(POSITION_KEY) if vehicle == VEHICLE_ID else None
+    since = datetime.fromisoformat(position["effective_at"].replace("Z", "+00:00")) if position else None
+    points = await asyncio.to_thread(request.app["data"].history, vehicle, since=since)
     return web.json_response({"vehicleId": vehicle, "points": points})
 
 
@@ -195,22 +199,22 @@ async def briefing_endpoint(request):
 
 
 async def health(request):
-    return web.json_response({"status": "running", "service": "Caldova Drive", "buildId": request.app.get("build_id", "local")})
+    return web.json_response({"status": "running", "service": "Fleet Operations", "buildId": request.app.get("build_id", "local")})
 
 
 async def legal(request):
     page = "Privacy" if request.path == "/privacy" else "Terms of use"
     return web.Response(
-        text=f"""<!doctype html><html lang="en"><meta charset="utf-8"><title>{page} | Caldova Drive</title>
-        <body style="max-width:700px;margin:60px auto;font:16px/1.8 system-ui"><h1>Caldova Drive: {page}</h1>
-        <p>This internal fleet operations application is restricted to the configured Caldova tenant operator.
-        Vehicle telemetry and business data are stored in Microsoft Fabric in the Caldova tenant.
+        text=f"""<!doctype html><html lang="en"><meta charset="utf-8"><title>{page} | Fleet Operations</title>
+        <body style="max-width:700px;margin:60px auto;font:16px/1.8 system-ui"><h1>Fleet Operations: {page}</h1>
+        <p>This internal fleet operations application is restricted to the configured operator.
+        Vehicle telemetry and business data are stored in the configured Microsoft Fabric workspace.
         Chat questions are processed by the Fabric data agent. Teams conversation references,
         recent conversation context, telemetry checkpoints and delivery receipts are stored on the application's persistent disk.</p>
         <p>Use this application for the authorized rental-fleet demonstration. Do not upload confidential customer data.
         AI-generated answers should be checked against their reporting period and underlying Fabric records.
         Daily Teams briefings can be paused by sending <strong>stop briefings</strong> to the agent.</p>
-        <p>Contact the Caldova demo tenant administrator for access, retention and deletion requests.</p></body></html>""",
+        <p>Contact the workspace administrator for access, retention and deletion requests.</p></body></html>""",
         content_type="text/html",
     )
 
@@ -237,12 +241,13 @@ async def worker(app):
                 heartbeat.result()
             await asyncio.to_thread(lease.renew)
             await asyncio.to_thread(morning_wakeup, store, datetime.now(UTC))
-            result = await asyncio.to_thread(tick, data, store, movement)
-            await asyncio.to_thread(lease.renew)
-            if time.monotonic() - last_refresh > app["config"]["lakehouse_refresh_seconds"]:
-                refreshed = await asyncio.to_thread(data.refresh_lakehouse)
-                await asyncio.to_thread(store.put, "lakehouse-refresh.json", refreshed)
-                last_refresh = time.monotonic()
+            async with app["fleet_data_lock"]:
+                result = await asyncio.to_thread(tick, data, store, movement)
+                await asyncio.to_thread(lease.renew)
+                if time.monotonic() - last_refresh > app["config"]["lakehouse_refresh_seconds"]:
+                    refreshed = await asyncio.to_thread(data.refresh_lakehouse)
+                    await asyncio.to_thread(store.put, "lakehouse-refresh.json", refreshed)
+                    last_refresh = time.monotonic()
             if app["teams"] is not None and time.monotonic() - last_briefing_attempt > 300:
                 last_briefing_attempt = time.monotonic()
                 if await service.due(datetime.now(UTC)):
@@ -309,7 +314,8 @@ async def repair_worker(app):
                     heartbeat.result()
                 await asyncio.to_thread(lease.renew)
             # The native Activator callback is primary; this reconciliation read catches missed callbacks.
-                await detect_impacts(app, reconciliation=True)
+                async with app["repairs"].lock:
+                    await detect_impacts(app, reconciliation=True)
                 await app["repairs"].cycle()
                 app["store"].put("repair-worker-health", {"state": "running", "at": utc_text(datetime.now(UTC))})
             except LeaseBusyError:
@@ -348,6 +354,7 @@ def create_app() -> web.Application:
         app.router.add_post("/api/messages", app["teams"].endpoint)
     app["briefing"] = BriefingService(app["data"], app["agent"], app["store"], app["teams"])
     app["snapshot_lock"] = asyncio.Lock()
+    app["fleet_data_lock"] = asyncio.Lock()
     app["snapshot_time"] = 0.0
     attach_incidents(app)
     app.router.add_get("/", index)

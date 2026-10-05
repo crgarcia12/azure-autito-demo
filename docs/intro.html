@@ -27,8 +27,6 @@
   .number { display: block; margin-bottom: 28px; color: var(--accent); font-size: 20px; font-weight: 650; }
   h2 { font-size: 29px; font-weight: 650; line-height: 1.15; letter-spacing: -.02em; min-height: 68px; }
   .step p { font-size: 21px; color: var(--muted); line-height: 1.5; margin-top: 16px; }
-  .approval { border-color: #b89a52; background: #fffcf4; }
-  .approval .number { color: #866018; }
   footer { display: flex; gap: 48px; font-size: 23px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 26px; }
   footer b { color: var(--text); font-weight: 600; }
   .hint { position: fixed; bottom: 10px; right: 14px; color: #9aa6bb; font-size: 12px; }
@@ -44,27 +42,20 @@
 <body>
 <section class="slide" id="slide">
   <header>
-    <p class="eyebrow">The insurance operation</p>
     <h1>From incident to repair</h1>
   </header>
   <ol class="process" aria-label="Repair process">
     <li class="step"><span class="number" aria-hidden="true">01</span><h2>Incident<br>reported</h2><p>The driver sends photos and explains what happened.</p></li>
-    <li class="step"><span class="number" aria-hidden="true">02</span><h2>Evidence<br>reviewed</h2><p>Assess the repair needs and protect personal details.</p></li>
-    <li class="step"><span class="number" aria-hidden="true">03</span><h2>Quotes<br>compared</h2><p>Three garages. Compare parts, price and time off the road.</p></li>
-    <li class="step approval"><span class="number" aria-hidden="true">04</span><h2>Manager<br>approves</h2><p>A person authorises the chosen compliant repair.</p></li>
-    <li class="step"><span class="number" aria-hidden="true">05</span><h2>Repair<br>booked</h2><p>The garage confirms the slot. The customer gets an update.</p></li>
+    <li class="step"><span class="number" aria-hidden="true">02</span><h2>Evidence<br>reviewed</h2><p>Assess the repair needs and protect personal details. Prepare quotes request.</p></li>
+    <li class="step"><span class="number" aria-hidden="true">03</span><h2>Quotes<br>compared</h2><p>Compare parts, price and time off the road.</p></li>
+    <li class="step"><span class="number" aria-hidden="true">04</span><h2>Manager<br>approves</h2><p>A person authorises the chosen compliant repair.</p></li>
+    <li class="step"><span class="number" aria-hidden="true">05</span><h2>Repair<br>booked</h2><p>The garage confirms the slot.</p></li>
   </ol>
-  <footer>
-    <span><b>Repair policy:</b> new original parts only.</span>
-    <span><b>Business goal:</b> less time off the road.</span>
-  </footer>
-</section>
-<div class="hint">F = full screen · P = print / PDF</div>
+  </section>
 <script>
   const slide = document.getElementById("slide");
   const fit = () => slide.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
   addEventListener("resize", fit); fit();
-  if (window !== top) document.querySelector(".hint").remove();
   addEventListener("keydown", e => {
     if (e.key === "f" || e.key === "F") document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     if (e.key === "p" || e.key === "P") print();

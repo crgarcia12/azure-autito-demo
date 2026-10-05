@@ -13,7 +13,7 @@ from content_studio.auth import AuthorSession
 from fleet.repair_policy import POLICY_PATH, PUBLICATION_PATH, repair_policy
 from tools.cloud import Cloud, CONFIG, GRAPH, save_state
 
-DOCX_NAME = "Caldova-Repair-Policy.docx"
+DOCX_NAME = "Repair-Policy.docx"
 
 
 def build_document(policy: dict) -> bytes:
@@ -28,7 +28,7 @@ def build_document(policy: dict) -> bytes:
     style = document.styles["Normal"]
     style.font.name = "Aptos"
     style.font.size = Pt(10.5)
-    document.add_heading("CALDOVA DRIVE", 0)
+    document.add_heading("REPAIR OPERATIONS", 0)
     document.add_heading("Repair Policy", 1)
     document.add_paragraph(f"{policy['id']} | Version {policy['version']} | Effective {policy['effective_date']}")
     document.add_paragraph(f"Policy owner: {policy['owner']}")
@@ -55,7 +55,7 @@ def build_document(policy: dict) -> bytes:
         "A quotation offering new aftermarket bumper parts may be cheaper and faster, but it fails RP-02 and is excluded under RP-05. "
         "An explicitly new genuine OEM offer remains eligible for comparison. If an offer simply says 'replacement bumper', request RP-03 clarification; do not assume it is OEM."
     )
-    section.footer.paragraphs[0].text = f"Caldova Drive | {policy['id']} | v{policy['version']} | Controlled repair policy"
+    section.footer.paragraphs[0].text = f"{policy['id']} | v{policy['version']} | Controlled repair policy"
     output = io.BytesIO()
     document.save(output)
     return output.getvalue()
@@ -69,7 +69,7 @@ def main():
     author = AuthorSession(CONFIG["report_recipient"])
     identity = author.verify()
     if identity["id"] != CONFIG["admin_object_id"]:
-        raise RuntimeError("Only the configured Caldova operator can publish the controlled policy.")
+        raise RuntimeError("Only the configured operator can publish the controlled policy.")
 
     def request(method, url, body=None, *, content=None, content_type="application/json"):
         if not url.startswith(GRAPH + "/"):

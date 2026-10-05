@@ -16,6 +16,17 @@ def test_state_survives_restart_and_create_does_not_overwrite(tmp_path):
     assert second.get("missing") is None
 
 
+def test_state_can_share_and_roll_back_a_case_transaction(tmp_path):
+    store = StateStore(tmp_path / "state.sqlite3")
+    with pytest.raises(RuntimeError):
+        with store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            store.put("report-link", {"token": "private"}, connection=db)
+            assert store.get("report-link", connection=db) == {"token": "private"}
+            raise RuntimeError("Abort the surrounding case transaction.")
+    assert store.get("report-link") is None
+
+
 def test_only_one_worker_can_hold_a_lease(tmp_path):
     store = StateStore(tmp_path / "state.sqlite3")
     with store.lease("worker") as first:

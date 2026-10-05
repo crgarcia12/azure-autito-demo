@@ -13,7 +13,8 @@ from fleet.config import data_credential, settings
 from fleet.domain import BRANCHES, RoadRoute, VehicleMotion, day_bounds, fleet_vehicles, parse_time, utc_text
 from fleet.fabric import FabricData
 from fleet.storage import StateStore
-from fleet.insurance import Incidents
+from fleet.insurance import INACTIVE_STATUSES, Incidents
+from fleet.demo_case import POSITION, POSITION_KEY, VEHICLE_ID
 
 LOG = logging.getLogger("caldova.injector")
 
@@ -130,10 +131,22 @@ def tick(data: FabricData, store: StateStore, movement: list[VehicleMotion]) -> 
     cursor = parse_time(checkpoint["through"])
     if cursor >= now:
         return {"state": "running", **checkpoint}
+    position = store.get(POSITION_KEY)
+    if position is None and any(motion.vehicle["VehicleId"] == VEHICLE_ID for motion in movement):
+        current = data.query("declare query_parameters(vehicle:string); FleetLatest() | where VehicleId == vehicle", {"vehicle": VEHICLE_ID})
+        if len(current) != 1:
+            raise RuntimeError("The configured vehicle position needs one existing telemetry record.")
+        anchor = current[0]
+        position = {
+            **POSITION, "effective_at": utc_text(cursor),
+            **{key: anchor[key] for key in ("OdometerKm", "Heading", "BatteryPct", "FuelPct", "EngineTempC")},
+        }
+        store.create(POSITION_KEY, position)
+        position = store.get(POSITION_KEY)
     batch_end = min(cursor + timedelta(minutes=15), now)
     holds = {}
     for incident in Incidents(store).list():
-        if incident["status"] not in {"closed", "not_an_incident"}:
+        if incident["status"] not in INACTIVE_STATUSES:
             key = f"vehicle-hold/{incident['id']}"
             saved = store.get(key)
             if saved is None:
@@ -154,7 +167,16 @@ def tick(data: FabricData, store: StateStore, movement: list[VehicleMotion]) -> 
                     sample.OdometerKm, sample.Heading = anchor.OdometerKm, anchor.Heading
                     sample.DistanceKm = motion.sample(cursor, stopped).DistanceKm if cursor < stopped else 0
                     sample.SpeedKmh = 0
-                    sample.Status, sample.Alert = "incident", "Incident under review"
+                    sample.Status, sample.Alert = "incident", "Incident detected"
+            if position and motion.vehicle["VehicleId"] == VEHICLE_ID and end > parse_time(position["effective_at"]):
+                sample.Latitude, sample.Longitude = position["Latitude"], position["Longitude"]
+                sample.OdometerKm, sample.Heading = position["OdometerKm"], position["Heading"]
+                sample.BatteryPct, sample.FuelPct = position["BatteryPct"], position["FuelPct"]
+                sample.EngineTempC = position["EngineTempC"]
+                sample.DistanceKm = sample.SpeedKmh = 0
+                sample.RouteId = position["RouteId"]
+                if not stopped:
+                    sample.Status, sample.Alert = "on-hire", ""
             rows.append(sample.model_dump(mode="json"))
         cursor = end
     data.ingest("Telemetry", rows)

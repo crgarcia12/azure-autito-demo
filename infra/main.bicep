@@ -117,7 +117,7 @@ resource bot 'Microsoft.BotService/botServices@2022-09-15' = {
     name: 'F0'
   }
   properties: {
-    displayName: 'Caldova Drive'
+    displayName: 'Fleet Operations'
     endpoint: 'https://${app.properties.defaultHostName}/api/messages'
     msaAppId: agentAppId
     msaAppType: 'SingleTenant'
